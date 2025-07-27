@@ -1,0 +1,46 @@
+.container {
+  padding: 20px;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.spacer {
+  flex: 1 1 auto;
+}
+
+.demo-card {
+  margin-bottom: 20px;
+}
+
+.full-width {
+  width: 100%;
+  margin: 16px 0;
+}
+
+.button-demo {
+  margin-top: 20px;
+  
+  h3 {
+    margin-bottom: 16px;
+    color: #333;
+  }
+}
+
+.button-row {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+mat-card-content {
+  p {
+    margin-bottom: 16px;
+    line-height: 1.5;
+  }
+}
+
+mat-card-actions {
+  padding: 16px;
+}
