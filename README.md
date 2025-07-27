@@ -1,59 +1,110 @@
-# SaobracajPanel
+# Saobracaj Panel
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 19.0.5.
+Angular приложение для работы с GraphQL API, включающее систему авторизации и отображение списка комментариев.
 
-## Development server
+## Функциональность
 
-To start a local development server, run:
+### Авторизация
+- Форма входа с email и паролем
+- Автоматическое сохранение токенов в localStorage
+- Автоматическое обновление access token при истечении
+- Защищенные маршруты с помощью AuthGuard
 
+### GraphQL интеграция
+- Подключение к GraphQL серверу на `http://0.0.0.0:8080/graphql`
+- Автоматическое добавление Bearer токена к запросам
+- Обработка ошибок истекшего токена
+
+### Компоненты
+- **LoginComponent** - форма авторизации с Material Design
+- **CommentsComponent** - отображение списка комментариев
+- **AuthService** - сервис для работы с авторизацией и GraphQL
+- **AuthGuard** - защита маршрутов
+
+## Установка и запуск
+
+1. Установите зависимости:
+```bash
+npm install
+```
+
+2. Убедитесь, что GraphQL сервер запущен на `http://0.0.0.0:8080/graphql`
+
+3. Запустите приложение:
 ```bash
 ng serve
 ```
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
+4. Откройте браузер и перейдите на `http://localhost:4200`
 
-## Code scaffolding
+## API Endpoints
 
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
-
-```bash
-ng generate component component-name
+### Авторизация
+```graphql
+query Auth($email: String!, $password: String!) {
+  auth(email: $email, password: $password) {
+    accessToken
+    refreshToken
+  }
+}
 ```
 
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
-
-```bash
-ng generate --help
+### Обновление токена
+```graphql
+query RefreshToken($refreshToken: String!) {
+  refreshToken(refreshToken: $refreshToken) {
+    accessToken
+    refreshToken
+  }
+}
 ```
 
-## Building
-
-To build the project run:
-
-```bash
-ng build
+### Получение комментариев
+```graphql
+query Comments {
+  comments {
+    id
+  }
+}
 ```
 
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
+## Структура проекта
 
-## Running unit tests
-
-To execute unit tests with the [Karma](https://karma-runner.github.io) test runner, use the following command:
-
-```bash
-ng test
+```
+src/
+├── app/
+│   ├── components/
+│   │   ├── login/
+│   │   │   ├── login.component.ts
+│   │   │   ├── login.component.html
+│   │   │   └── login.component.scss
+│   │   └── comments/
+│   │       ├── comments.component.ts
+│   │       ├── comments.component.html
+│   │       └── comments.component.scss
+│   ├── services/
+│   │   └── auth.service.ts
+│   ├── guards/
+│   │   └── auth.guard.ts
+│   ├── app.component.ts
+│   ├── app.component.html
+│   ├── app.component.scss
+│   ├── app.config.ts
+│   └── app.routes.ts
 ```
 
-## Running end-to-end tests
+## Технологии
 
-For end-to-end (e2e) testing, run:
+- Angular 19
+- Angular Material
+- Apollo Client для GraphQL
+- RxJS
+- TypeScript
 
-```bash
-ng e2e
-```
+## Особенности
 
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
-
-## Additional Resources
-
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+- Адаптивный дизайн для мобильных устройств
+- Обработка ошибок с уведомлениями
+- Автоматическое обновление токенов
+- Защита от серверного рендеринга (SSR)
+- Красивый UI с Material Design

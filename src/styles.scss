@@ -1,4 +1,402 @@
 /* You can add global styles to this file, and also import other style files */
 
-html, body { height: 100%; }
-body { margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif; }
+/* Material Design 3 Color System */
+:root {
+  /* Primary colors - Modern Purple */
+  --mdc-theme-primary: #6750a4;
+  --mdc-theme-on-primary: #ffffff;
+  --mdc-theme-primary-container: #e8def8;
+  --mdc-theme-on-primary-container: #21005d;
+  
+  /* Secondary colors */
+  --mdc-theme-secondary: #625b71;
+  --mdc-theme-on-secondary: #ffffff;
+  --mdc-theme-secondary-container: #e8def8;
+  --mdc-theme-on-secondary-container: #1d192b;
+  
+  /* Surface colors */
+  --mdc-theme-surface: #fffbfe;
+  --mdc-theme-on-surface: #1c1b1f;
+  --mdc-theme-surface-container: #fef7ff;
+  --mdc-theme-on-surface-container: #1c1b1f;
+  --mdc-theme-surface-variant: #e7e0ec;
+  --mdc-theme-on-surface-variant: #49454f;
+  
+  /* Outline colors */
+  --mdc-theme-outline: #79747e;
+  --mdc-theme-outline-variant: #cac4d0;
+  
+  /* Error colors */
+  --mdc-theme-error: #ba1a1a;
+  --mdc-theme-on-error: #ffffff;
+  --mdc-theme-error-container: #ffdad6;
+  --mdc-theme-on-error-container: #410002;
+  
+  /* Shadow */
+  --mdc-theme-shadow: 0 1px 3px 1px rgba(0, 0, 0, 0.15), 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+  
+  /* Custom colors */
+  --app-background: #f8f9fa;
+  --card-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  --card-shadow-hover: 0 8px 24px rgba(0, 0, 0, 0.12);
+  --border-radius: 16px;
+  --border-radius-small: 8px;
+  --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Dark theme support */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --mdc-theme-primary: #d0bcff;
+    --mdc-theme-on-primary: #381e72;
+    --mdc-theme-primary-container: #4f378b;
+    --mdc-theme-on-primary-container: #e8def8;
+    
+    --mdc-theme-secondary: #ccc2dc;
+    --mdc-theme-on-secondary: #332d41;
+    --mdc-theme-secondary-container: #4a4458;
+    --mdc-theme-on-secondary-container: #e8def8;
+    
+    --mdc-theme-surface: #1c1b1f;
+    --mdc-theme-on-surface: #e6e1e5;
+    --mdc-theme-surface-container: #211f26;
+    --mdc-theme-on-surface-container: #e6e1e5;
+    --mdc-theme-surface-variant: #49454f;
+    --mdc-theme-on-surface-variant: #cac4d0;
+    
+    --mdc-theme-outline: #938f99;
+    --mdc-theme-outline-variant: #49454f;
+    
+    --mdc-theme-error: #ffb4ab;
+    --mdc-theme-on-error: #690005;
+    --mdc-theme-error-container: #93000a;
+    --mdc-theme-on-error-container: #ffdad6;
+    
+    --app-background: #121212;
+    --card-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    --card-shadow-hover: 0 8px 24px rgba(0, 0, 0, 0.4);
+  }
+}
+
+/* Additional global styles */
+* {
+  box-sizing: border-box;
+}
+
+html, body { 
+  height: 100%; 
+  margin: 0;
+  font-family: 'Roboto', sans-serif;
+  background-color: var(--app-background);
+}
+
+body { 
+  margin: 0; 
+  font-family: Roboto, "Helvetica Neue", sans-serif; 
+  color: var(--mdc-theme-on-surface);
+  line-height: 1.6;
+}
+
+/* Common layout styles */
+.page-container {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--app-background);
+}
+
+.content-container {
+  flex: 1;
+  padding: 24px;
+  max-width: 1200px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.toolbar-container {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  box-shadow: var(--mdc-theme-shadow);
+  backdrop-filter: blur(10px);
+  background: var(--mdc-theme-primary) !important;
+  color: var(--mdc-theme-on-primary) !important;
+}
+
+.spacer {
+  flex: 1 1 auto;
+}
+
+/* Common card styles */
+.mat-mdc-card {
+  border-radius: var(--border-radius) !important;
+  box-shadow: var(--card-shadow) !important;
+  border: 1px solid var(--mdc-theme-outline-variant) !important;
+  background: var(--mdc-theme-surface) !important;
+  transition: var(--transition) !important;
+  overflow: hidden;
+}
+
+.mat-mdc-card:hover {
+  box-shadow: var(--card-shadow-hover) !important;
+  transform: translateY(-2px);
+}
+
+/* Common toolbar styles */
+.mat-toolbar {
+  border-radius: 0 !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+  font-weight: 500 !important;
+}
+
+/* Common button styles */
+.mat-mdc-raised-button {
+  border-radius: var(--border-radius-small) !important;
+  text-transform: none !important;
+  font-weight: 500 !important;
+  letter-spacing: 0.1px !important;
+  transition: var(--transition) !important;
+  min-height: 40px !important;
+}
+
+.mat-mdc-raised-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+}
+
+.mat-mdc-icon-button {
+  border-radius: 50% !important;
+  transition: var(--transition) !important;
+}
+
+.mat-mdc-icon-button:hover {
+  background-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+/* Common form field styles */
+.mat-mdc-form-field {
+  .mat-mdc-text-field-wrapper {
+    border-radius: var(--border-radius-small) !important;
+    transition: var(--transition) !important;
+  }
+  
+  .mat-mdc-text-field-wrapper:hover {
+    background-color: rgba(0, 0, 0, 0.02) !important;
+  }
+}
+
+/* Common spinner styles */
+.mat-mdc-progress-spinner circle {
+  stroke: var(--mdc-theme-primary) !important;
+}
+
+/* Common list styles */
+.mat-mdc-list-item {
+  border-radius: var(--border-radius-small) !important;
+  margin: 4px 0 !important;
+  transition: var(--transition) !important;
+  
+  &:hover {
+    background-color: var(--mdc-theme-surface-variant) !important;
+    transform: translateX(4px);
+  }
+}
+
+/* Login specific styles */
+.login-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: calc(100vh - 64px);
+  padding: 20px;
+}
+
+.login-card {
+  max-width: 400px;
+  width: 100%;
+}
+
+/* Comments specific styles */
+.comments-card {
+  margin-bottom: 20px;
+}
+
+.loading-container,
+.error-container,
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  text-align: center;
+}
+
+.loading-container p,
+.error-container p,
+.empty-state p {
+  margin-top: 16px;
+  font-size: 16px;
+  color: var(--mdc-theme-on-surface-variant);
+}
+
+.error-container mat-icon {
+  font-size: 48px;
+  width: 48px;
+  height: 48px;
+  margin-bottom: 16px;
+  color: var(--mdc-theme-error);
+}
+
+.empty-state mat-icon {
+  font-size: 64px;
+  width: 64px;
+  height: 64px;
+  margin-bottom: 16px;
+  opacity: 0.5;
+  color: var(--mdc-theme-on-surface-variant);
+}
+
+.comment-item {
+  transition: var(--transition) !important;
+  border-radius: var(--border-radius-small) !important;
+  margin: 8px 0 !important;
+}
+
+.comment-item:hover {
+  background-color: var(--mdc-theme-surface-variant) !important;
+  transform: translateX(4px);
+}
+
+/* Card header and content styles */
+mat-card-header {
+  margin-bottom: 20px;
+  padding: 24px 24px 0 24px;
+}
+
+mat-card-title {
+  font-size: 28px;
+  font-weight: 400;
+  line-height: 36px;
+  color: var(--mdc-theme-on-surface);
+  margin-bottom: 8px;
+}
+
+mat-card-subtitle {
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--mdc-theme-on-surface-variant);
+}
+
+mat-card-content {
+  padding: 0 24px 24px 24px;
+}
+
+/* Form field styles */
+.full-width {
+  width: 100%;
+  margin-bottom: 16px;
+}
+
+.button-container {
+  margin-top: 32px;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .content-container {
+    padding: 16px;
+  }
+  
+  mat-card-title {
+    font-size: 24px;
+    line-height: 32px;
+  }
+  
+  mat-card-header {
+    padding: 20px 20px 0 20px;
+  }
+  
+  mat-card-content {
+    padding: 0 20px 20px 20px;
+  }
+}
+
+@media (max-width: 480px) {
+  .content-container {
+    padding: 12px;
+  }
+  
+  .login-wrapper {
+    padding: 16px;
+  }
+  
+  .login-card {
+    max-width: 100%;
+  }
+  
+  mat-card-header {
+    padding: 16px 16px 0 16px;
+  }
+  
+  mat-card-content {
+    padding: 0 16px 16px 16px;
+  }
+  
+  mat-card-title {
+    font-size: 20px;
+    line-height: 28px;
+  }
+}
+
+/* Animation classes */
+.fade-in {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.slide-in {
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Utility classes */
+.text-center {
+  text-align: center;
+}
+
+.text-muted {
+  color: var(--mdc-theme-on-surface-variant);
+}
+
+.mb-16 {
+  margin-bottom: 16px;
+}
+
+.mt-16 {
+  margin-top: 16px;
+}
+
+.p-16 {
+  padding: 16px;
+}

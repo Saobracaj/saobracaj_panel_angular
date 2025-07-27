@@ -1,0 +1,67 @@
+<div class="page-container">
+  <mat-toolbar color="primary" class="toolbar-container">
+    <span>Saobracaj Panel</span>
+    <span class="spacer"></span>
+    <mat-icon>login</mat-icon>
+  </mat-toolbar>
+
+  <div class="content-container">
+    <div class="login-wrapper">
+      <mat-card class="login-card">
+        <mat-card-header>
+          <mat-card-title>Авторизация</mat-card-title>
+          <mat-card-subtitle>Введите ваши учетные данные</mat-card-subtitle>
+        </mat-card-header>
+        
+        <mat-card-content>
+          <form (ngSubmit)="onSubmit()" #loginForm="ngForm">
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Email</mat-label>
+              <input 
+                matInput 
+                type="email" 
+                [(ngModel)]="email" 
+                name="email"
+                placeholder="Введите email"
+                required
+                [disabled]="isLoading">
+              <mat-icon matSuffix>email</mat-icon>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Пароль</mat-label>
+              <input 
+                matInput 
+                [type]="hidePassword ? 'password' : 'text'"
+                [(ngModel)]="password" 
+                name="password"
+                placeholder="Введите пароль"
+                required
+                [disabled]="isLoading">
+              <button 
+                mat-icon-button 
+                matSuffix 
+                (click)="togglePasswordVisibility()" 
+                type="button"
+                [disabled]="isLoading">
+                <mat-icon>{{hidePassword ? 'visibility_off' : 'visibility'}}</mat-icon>
+              </button>
+            </mat-form-field>
+
+            <div class="button-container">
+              <button 
+                mat-raised-button 
+                color="primary" 
+                type="submit"
+                [disabled]="isLoading || !email || !password"
+                class="full-width">
+                <mat-spinner *ngIf="isLoading" diameter="20"></mat-spinner>
+                <span *ngIf="!isLoading">Войти</span>
+              </button>
+            </div>
+          </form>
+        </mat-card-content>
+      </mat-card>
+    </div>
+  </div>
+</div> 

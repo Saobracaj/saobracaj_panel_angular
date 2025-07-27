@@ -6,6 +6,7 @@ import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatSnackBarModule } from '@angular/material/snack-bar';
 import { FormsModule } from '@angular/forms';
 
 @Component({
@@ -18,6 +19,7 @@ import { FormsModule } from '@angular/forms';
     MatIconModule,
     MatInputModule,
     MatFormFieldModule,
+    MatSnackBarModule,
     FormsModule
   ],
   templateUrl: './app.component.html',
@@ -25,5 +27,4 @@ import { FormsModule } from '@angular/forms';
 })
 export class AppComponent {
   title = 'saobracaj_panel';
-  inputValue = '';
 }
