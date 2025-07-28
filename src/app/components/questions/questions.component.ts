@@ -29,6 +29,15 @@ interface Question {
   zakon?: string;
 }
 
+interface RussianTranslation {
+  qId: number;
+  qcId: number;
+  Text: string;
+  Choices: Array<{
+    Text: string;
+  }>;
+}
+
 interface QuestionStatus {
   id: string;
   status: 'PENDING' | 'DRAFT' | 'MODERATION' | 'READY';
@@ -54,6 +63,7 @@ interface QuestionStatus {
 })
 export class QuestionsComponent implements OnInit {
   questions: Question[] = [];
+  russianTranslations: RussianTranslation[] = [];
   questionStatuses: QuestionStatus[] = [];
   isLoading: boolean = true;
   isLoadingStatuses: boolean = false;
@@ -94,10 +104,15 @@ export class QuestionsComponent implements OnInit {
       })
       .then((questions: Question[]) => {
         this.questions = questions;
+        
+        // Загружаем русские переводы
+        return this.loadRussianTranslations();
+      })
+      .then(() => {
         this.isLoading = false;
         
         // Создаем статусы по умолчанию (PENDING) для всех вопросов
-        this.questionStatuses = questions.map(q => ({
+        this.questionStatuses = this.questions.map(q => ({
           id: q.qId.toString(),
           status: 'PENDING' as const
         }));
@@ -123,6 +138,33 @@ export class QuestionsComponent implements OnInit {
           duration: 5000
         });
       });
+  }
+
+  loadRussianTranslations(): Promise<void> {
+    return fetch('/allQuestions_ru.json')
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('Ошибка загрузки русских переводов');
+        }
+        return response.json();
+      })
+      .then((translations: RussianTranslation[]) => {
+        this.russianTranslations = translations;
+      })
+      .catch(error => {
+        console.error('Ошибка загрузки русских переводов:', error);
+        // Не показываем ошибку пользователю, так как переводы не критичны
+        this.russianTranslations = [];
+      });
+  }
+
+  getRussianTranslation(questionId: number): RussianTranslation | undefined {
+    return this.russianTranslations.find(t => t.qId === questionId);
+  }
+
+  getRussianChoiceTranslation(questionId: number, choiceIndex: number): string | undefined {
+    const translation = this.getRussianTranslation(questionId);
+    return translation?.Choices?.[choiceIndex]?.Text;
   }
 
   loadQuestionStatuses(): void {
@@ -209,6 +251,25 @@ export class QuestionsComponent implements OnInit {
 
   getQuestionStatus(questionId: number): QuestionStatus | undefined {
     return this.questionStatuses.find(status => status.id === questionId.toString());
+  }
+
+  getSelectedQuestion(): Question | undefined {
+    if (!this.selectedQuestionId) return undefined;
+    return this.questions.find(q => q.qId === this.selectedQuestionId);
+  }
+
+  onImageError(event: Event): void {
+    const img = event.target as HTMLImageElement;
+    img.style.display = 'none';
+    const container = img.parentElement;
+    if (container) {
+      container.innerHTML = '<p>Изображение недоступно</p>';
+    }
+  }
+
+  onImageLoad(event: Event): void {
+    const img = event.target as HTMLImageElement;
+    img.style.opacity = '1';
   }
 
   private refreshTokenAndRetry(): void {

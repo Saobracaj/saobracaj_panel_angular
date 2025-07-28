@@ -45,7 +45,7 @@
                   [class.selected]="selectedQuestionId === question.qId"
                   (click)="selectQuestion(question.qId)">
                   
-                  <div class="question-content">
+                  <div class="question-item-content">
                     <div class="question-number">
                       {{question.qId}}
                     </div>
@@ -72,7 +72,9 @@
               <span *ngIf="!selectedQuestionId">Выберите вопрос</span>
             </mat-card-title>
             <mat-card-subtitle *ngIf="selectedQuestionId">
-              Статус: {{getQuestionStatus(selectedQuestionId)?.status}}
+              Статус: {{getQuestionStatus(selectedQuestionId)?.status}} | 
+              {{getSelectedQuestion()?.ChoicesReq}} ответ(ов) | 
+              {{getSelectedQuestion()?.Points}} балл(ов)
             </mat-card-subtitle>
           </mat-card-header>
 
@@ -83,8 +85,64 @@
             </div>
 
             <div *ngIf="selectedQuestionId" class="question-details">
-              <!-- Здесь будет отображаться содержимое выбранного вопроса -->
-              <p>Содержимое вопроса #{{selectedQuestionId}} будет отображаться здесь</p>
+              <div *ngIf="getSelectedQuestion()" class="question-content">
+                <!-- Текст вопроса -->
+                <div class="question-text">
+                  <p>{{getSelectedQuestion()?.Text}}</p>
+                  <!-- Русский перевод вопроса -->
+                  <p *ngIf="getRussianTranslation(selectedQuestionId)?.Text" class="russian-translation">
+                    {{getRussianTranslation(selectedQuestionId)?.Text}}
+                  </p>
+                </div>
+
+                <!-- Изображение вопроса -->
+                <div *ngIf="getSelectedQuestion()?.HasImage" class="question-image">
+                  <img [src]="'https://saobracaj.gleb.at/img/' + selectedQuestionId + '.jpeg'" 
+                       [alt]="'Изображение для вопроса ' + selectedQuestionId"
+                       class="question-img"
+                       (error)="onImageError($event)"
+                       (load)="onImageLoad($event)">
+                </div>
+
+                <!-- Варианты ответов -->
+                <div class="question-choices">
+                  <h4>Варианты ответов:</h4>
+                  <div class="choices-list">
+                    <div *ngFor="let choice of getSelectedQuestion()?.Choices; let i = index" 
+                         class="choice-item"
+                         [class.correct]="choice.isCorrect">
+                      <span class="choice-number">{{i + 1}}.</span>
+                      <div class="choice-content">
+                        <span class="choice-text">{{choice.Text}}</span>
+                        <!-- Русский перевод ответа -->
+                        <div *ngIf="getRussianChoiceTranslation(selectedQuestionId, i)" class="russian-translation-choice">
+                          {{getRussianChoiceTranslation(selectedQuestionId, i)}}
+                        </div>
+                      </div>
+                      <span *ngIf="choice.isCorrect" class="correct-indicator">✓</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Дополнительная информация -->
+                <div class="question-info">
+                  <div class="info-item">
+                    <strong>Требуется ответов:</strong> {{getSelectedQuestion()?.ChoicesReq}}
+                  </div>
+                  <div class="info-item">
+                    <strong>Баллов:</strong> {{getSelectedQuestion()?.Points}}
+                  </div>
+                  <div class="info-item">
+                    <strong>Категория:</strong> {{getSelectedQuestion()?.categoryId}}
+                  </div>
+                  <div class="info-item">
+                    <strong>Подкатегория:</strong> {{getSelectedQuestion()?.subcategoryId}}
+                  </div>
+                  <div *ngIf="getSelectedQuestion()?.zakon" class="info-item">
+                    <strong>Закон:</strong> {{getSelectedQuestion()?.zakon}}
+                  </div>
+                </div>
+              </div>
             </div>
           </mat-card-content>
         </mat-card>
