@@ -12,6 +12,8 @@ import { MatMenuModule } from '@angular/material/menu';
 import { MatDividerModule } from '@angular/material/divider';
 import { Router, ActivatedRoute } from '@angular/router';
 import { AuthService, Comment, CommentNotification } from '../../services/auth.service';
+import { CommentService, CommentDetail } from '../../services/comment.service';
+import { MarkdownEditorComponent } from '../markdown-editor/markdown-editor.component';
 
 interface Question {
   qId: number;
@@ -56,7 +58,8 @@ interface QuestionStatus {
     MatProgressSpinnerModule,
     MatBadgeModule,
     MatMenuModule,
-    MatDividerModule
+    MatDividerModule,
+    MarkdownEditorComponent
   ],
   templateUrl: './questions.component.html',
   styleUrl: './questions.component.scss'
@@ -73,6 +76,7 @@ export class QuestionsComponent implements OnInit {
 
   constructor(
     private authService: AuthService,
+    private commentService: CommentService,
     private router: Router,
     private route: ActivatedRoute,
     private snackBar: MatSnackBar
@@ -243,6 +247,7 @@ export class QuestionsComponent implements OnInit {
   }
 
   selectQuestion(questionId: number): void {
+    console.log('Выбран вопрос:', questionId);
     this.selectedQuestionId = questionId;
     // Обновляем URL с ID вопроса
     this.router.navigate(['/questions', questionId], { replaceUrl: true });
@@ -299,5 +304,14 @@ export class QuestionsComponent implements OnInit {
 
   trackByQuestionId(index: number, question: Question): number {
     return question.qId;
+  }
+
+  onCommentUpdated(comment: CommentDetail): void {
+    console.log('Комментарий обновлен:', comment);
+    // Обновляем статус вопроса в списке
+    const questionIndex = this.questionStatuses.findIndex(s => s.id === comment.id);
+    if (questionIndex !== -1) {
+      this.questionStatuses[questionIndex].status = comment.status;
+    }
   }
 } 
