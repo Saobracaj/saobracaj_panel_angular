@@ -1,1 +1,62 @@
-/* Login component styles - все стили перенесены в глобальный styles.scss */ 
+.page-container {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.toolbar-container {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+}
+
+.spacer {
+  flex: 1 1 auto;
+}
+
+.content-container {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  min-height: calc(100vh - 64px);
+}
+
+.login-wrapper {
+  width: 100%;
+  max-width: 400px;
+}
+
+.login-card {
+  width: 100%;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  border-radius: 12px;
+}
+
+.full-width {
+  width: 100%;
+}
+
+.button-container {
+  margin-top: 24px;
+}
+
+
+mat-spinner {
+  margin-right: 8px;
+}
+
+@media (max-width: 600px) {
+  .content-container {
+    padding: 16px;
+  }
+  
+  .login-wrapper {
+    max-width: 100%;
+  }
+  
+  .login-card {
+    border-radius: 8px;
+  }
+}

@@ -1,0 +1,94 @@
+<div class="page-container">
+  <mat-toolbar color="primary" class="toolbar-container">
+    <span>Список вопросов</span>
+    <span class="spacer"></span>
+    
+    <button mat-icon-button (click)="logout()" matTooltip="Выйти">
+      <mat-icon>logout</mat-icon>
+    </button>
+  </mat-toolbar>
+
+  <div class="content-container">
+    <div class="questions-layout">
+      <!-- Левая панель со списком вопросов -->
+      <div class="questions-sidebar">
+        <mat-card class="questions-card">
+          <mat-card-header>
+            <mat-card-title>Вопросы</mat-card-title>
+            <mat-card-subtitle>Всего вопросов: {{questions.length}}</mat-card-subtitle>
+          </mat-card-header>
+
+          <mat-card-content>
+            <div *ngIf="isLoading" class="loading-container">
+              <mat-spinner diameter="40"></mat-spinner>
+              <p>Загрузка вопросов...</p>
+            </div>
+
+            <div *ngIf="error && !isLoading" class="error-container">
+              <mat-icon color="warn">error</mat-icon>
+              <p>{{error}}</p>
+              <button mat-raised-button color="primary" (click)="loadQuestions()">
+                Попробовать снова
+              </button>
+            </div>
+
+            <div *ngIf="!isLoading && !error">
+              <div *ngIf="questions.length === 0" class="empty-state">
+                <mat-icon>quiz</mat-icon>
+                <p>Вопросы не найдены</p>
+              </div>
+
+              <mat-list *ngIf="questions.length > 0" class="questions-list">
+                <mat-list-item 
+                  *ngFor="let question of questions; trackBy: trackByQuestionId" 
+                  class="question-item"
+                  [class.selected]="selectedQuestionId === question.qId"
+                  (click)="selectQuestion(question.qId)">
+                  
+                  <div class="question-content">
+                    <div class="question-number">
+                      {{question.qId}}
+                    </div>
+                    <div class="question-status">
+                      <span class="status-icon" 
+                            [title]="getQuestionStatus(question.qId)?.status || 'PENDING'">
+                        {{getStatusIcon(getQuestionStatus(question.qId)?.status || 'PENDING')}}
+                      </span>
+                    </div>
+                  </div>
+                </mat-list-item>
+              </mat-list>
+            </div>
+          </mat-card-content>
+        </mat-card>
+      </div>
+
+      <!-- Правая панель для контента -->
+      <div class="content-panel">
+        <mat-card class="content-card">
+          <mat-card-header>
+            <mat-card-title>
+              <span *ngIf="selectedQuestionId">Вопрос #{{selectedQuestionId}}</span>
+              <span *ngIf="!selectedQuestionId">Выберите вопрос</span>
+            </mat-card-title>
+            <mat-card-subtitle *ngIf="selectedQuestionId">
+              Статус: {{getQuestionStatus(selectedQuestionId)?.status}}
+            </mat-card-subtitle>
+          </mat-card-header>
+
+          <mat-card-content>
+            <div *ngIf="!selectedQuestionId" class="no-selection">
+              <mat-icon>info</mat-icon>
+              <p>Выберите вопрос из списка слева для просмотра содержимого</p>
+            </div>
+
+            <div *ngIf="selectedQuestionId" class="question-details">
+              <!-- Здесь будет отображаться содержимое выбранного вопроса -->
+              <p>Содержимое вопроса #{{selectedQuestionId}} будет отображаться здесь</p>
+            </div>
+          </mat-card-content>
+        </mat-card>
+      </div>
+    </div>
+  </div>
+</div> 

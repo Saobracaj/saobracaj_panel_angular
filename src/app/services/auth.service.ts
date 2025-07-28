@@ -10,6 +10,15 @@ export interface AuthTokens {
 
 export interface Comment {
   id: string;
+  status: 'PENDING' | 'DRAFT' | 'MODERATION' | 'READY';
+}
+
+export interface CommentNotification {
+  id: string;
+  created: string;
+  message: string;
+  qId: string;
+  read: boolean;
 }
 
 @Injectable({
@@ -91,6 +100,7 @@ export class AuthService {
       query Comments {
         comments {
           id
+          status
         }
       }
     `;
@@ -99,6 +109,47 @@ export class AuthService {
       query: COMMENTS_QUERY
     }).pipe(
       map(result => result.data.comments)
+    );
+  }
+
+  getCommentNotifications(): Observable<CommentNotification[]> {
+    const NOTIFICATIONS_QUERY = gql`
+      query CommentNotifications {
+        commentNotifications {
+          created
+          id
+          message
+          qId
+          read
+        }
+      }
+    `;
+
+    return this.apollo.query<{ commentNotifications: CommentNotification[] }>({
+      query: NOTIFICATIONS_QUERY
+    }).pipe(
+      map(result => result.data.commentNotifications)
+    );
+  }
+
+  readNotifications(lastReadTime: string): Observable<CommentNotification[]> {
+    const READ_NOTIFICATIONS_MUTATION = gql`
+      mutation ReadNotifications($lastReadTime: String!) {
+        readNotifications(lastReadTime: $lastReadTime) {
+          created
+          id
+          message
+          qId
+          read
+        }
+      }
+    `;
+
+    return this.apollo.mutate<{ readNotifications: CommentNotification[] }>({
+      mutation: READ_NOTIFICATIONS_MUTATION,
+      variables: { lastReadTime }
+    }).pipe(
+      map(result => result.data!.readNotifications)
     );
   }
 

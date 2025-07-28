@@ -54,7 +54,7 @@ export class LoginComponent {
     this.authService.login(this.email, this.password).subscribe({
       next: () => {
         this.isLoading = false;
-        this.router.navigate(['/comments']);
+        this.router.navigate(['/questions']);
         this.snackBar.open('Успешная авторизация!', 'Закрыть', {
           duration: 3000
         });
