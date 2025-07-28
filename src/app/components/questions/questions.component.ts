@@ -178,10 +178,29 @@ export class QuestionsComponent implements OnInit {
     // GraphQL запрос для получения статусов комментариев
     this.authService.getComments().subscribe({
       next: (comments) => {
+        console.log('Получены комментарии с сервера:', comments);
+        console.log('Общее количество комментариев:', comments.length);
+        console.log('Общее количество вопросов:', this.questions.length);
+        
         // Обновляем статусы для всех вопросов
         this.questionStatuses = this.questions.map(question => {
           // Ищем соответствующий комментарий по ID
-          const comment = comments.find(c => c.id === question.qId.toString());
+          // Приводим оба значения к числу для корректного сравнения
+          const comment = comments.find(c => {
+            const commentId = typeof c.id === 'string' ? parseInt(c.id, 10) : c.id;
+            return commentId === question.qId;
+          });
+          
+          // Логируем только если комментарий найден или для первых 5 вопросов
+          if (comment || question.qId <= 7925) {
+            console.log(`Поиск комментария для вопроса ${question.qId}:`, {
+              questionId: question.qId,
+              foundComment: comment,
+              commentId: comment?.id,
+              status: comment?.status || 'PENDING'
+            });
+          }
+          
           return {
             id: question.qId.toString(),
             // Если статуса нет в ответе сервера, оставляем PENDING
@@ -312,6 +331,9 @@ export class QuestionsComponent implements OnInit {
     const questionIndex = this.questionStatuses.findIndex(s => s.id === comment.id);
     if (questionIndex !== -1) {
       this.questionStatuses[questionIndex].status = comment.status;
+      console.log(`Обновлен статус вопроса ${comment.id} на ${comment.status}`);
+    } else {
+      console.log(`Не найден вопрос с ID ${comment.id} для обновления статуса`);
     }
   }
 } 

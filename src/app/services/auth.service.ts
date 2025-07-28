@@ -106,9 +106,18 @@ export class AuthService {
     `;
 
     return this.apollo.query<{ comments: Comment[] }>({
-      query: COMMENTS_QUERY
+      query: COMMENTS_QUERY,
+      fetchPolicy: 'network-only' // Принудительно загружаем с сервера
     }).pipe(
-      map(result => result.data.comments)
+      map(result => {
+        console.log('AuthService: Получено комментариев:', result.data.comments.length);
+        if (result.data.comments.length > 0) {
+          console.log('AuthService: Первые 3 комментария:', result.data.comments.slice(0, 3));
+        } else {
+          console.log('AuthService: Комментарии не найдены - возможно, они еще не созданы');
+        }
+        return result.data.comments;
+      })
     );
   }
 
