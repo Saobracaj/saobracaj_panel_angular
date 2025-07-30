@@ -1,0 +1,163 @@
+#
+type Tokens {
+  accessToken: String!
+  refreshToken: String!
+}
+
+#
+type UserSettings {
+  notificationsEmail: Boolean!
+  pushEnabled: Boolean!
+  userName: String
+}
+
+#
+type User {
+  email: String
+  permissions: [Permissions!]
+  userId: String!
+}
+
+#
+type Comment {
+  draft: Text
+  history: [Text!]!
+  id: Long!
+  innerMessages: [InnerMessage!]!
+  status: CommentStatus!
+  text: Text
+}
+
+#
+type Text {
+  created: Long!
+  text: [TextItem!]!
+  updated: Long!
+}
+
+#
+type TextItem {
+  lang: Language!
+  text: String!
+}
+
+#
+type InnerMessage {
+  created: Long!
+  message: String!
+  ownerId: String!
+}
+
+#
+type CommentNotification {
+  created: Long!
+  id: String!
+  message: String!
+  qId: Long!
+  read: Boolean!
+}
+
+#
+input UserSettingsInput {
+  notificationsEmail: Boolean
+  pushEnabled: Boolean
+  userName: String
+}
+
+# User permissions
+enum Permissions {
+  BASIC
+  READ_USER_SETTINGS
+  READ_LOGS
+  READ_PERSONAL_NOTES
+  CREATE_PLACE
+  MODERATION
+}
+
+#
+enum CommentStatus {
+  PENDING
+  DRAFT
+  MODERATION
+  READY
+}
+
+#
+enum Language {
+  RU
+  SR
+}
+
+# The Short scalar type represents a signed 16-bit numeric non-fractional value
+scalar Short
+
+# The Long scalar type represents a signed 64-bit numeric non-fractional value
+scalar Long
+
+# Query object
+type Query {
+  # Authorize the user using email and password. If email is not confirmed and code has sent, you can pass confirmCode
+  auth(email: String!, password: String!, confirmCode: String): Tokens!
+
+  # Sign up the user.
+  # If email confirmation is required before providing access, it will return empty strings.
+  # Else an access token and a refresh token will be returned.
+  signUp(email: String!, password: String!): Tokens!
+
+  # Send a code for reset password to the email
+  sendResetPasswordCode(email: String!): Boolean!
+
+  # Authorize or register user using Firebase token. If email confirmation is required before providing access, it will return empty strings. Else an access token and a refresh token will be returned. If `confirmCode` is provided, if will be used to confirm the email
+  authFirebase(firebaseId: String!, confirmCode: String): Tokens!
+
+  # Send a code for remove the user data to the user email
+  removeAccountCode: Boolean!
+  removeData(code: String!): Boolean!
+  sendConfirmEmailCode(email: String!): Boolean!
+
+  # Get new access token and refresh token pair using refresh token
+  refreshToken(refreshToken: String!): Tokens!
+
+  # Get user settings
+  settings: UserSettings!
+
+  # Get current user's email
+  email: String!
+
+  # Get current user information
+  currentUser: User!
+  userByIds(userIds: [String!]!): [User!]!
+
+  # get all comments
+  comments: [Comment!]!
+
+  # comment by id
+  comment(id: Long!): Comment!
+
+  # Get last notifications
+  commentNotifications: [CommentNotification!]!
+}
+
+# Mutation object
+type Mutation {
+  # Reset user password using code that could be sent using sendResetPasswordCode query
+  auth(email: String!, newPassword: String!, code: String!): Tokens!
+
+  # Refresh user push token
+  refreshPushToken(token: String!): Boolean!
+
+  # Update user settings
+  updateSettings(settings: UserSettingsInput!): UserSettings
+
+  # Save draft text
+  draft(id: Long!, draft: String!): Comment!
+
+  # Apply the draft to the main text
+  applyDraft(id: Long!): Comment!
+
+  # Add inner comment to the question
+  addInnerMessage(id: Long!, message: String!): [InnerMessage!]!
+
+  # Mark all notifications read
+  readNotifications(lastReadTime: Long!): [CommentNotification!]!
+}

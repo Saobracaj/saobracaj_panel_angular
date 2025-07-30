@@ -3,12 +3,80 @@
     <span>Список вопросов</span>
     <span class="spacer"></span>
     
+    <!-- Иконка оповещений с меню -->
+    <button mat-icon-button 
+            [matMenuTriggerFor]="notificationsMenu"
+            [matBadge]="getUnreadNotificationsCount() > 0 ? getUnreadNotificationsCount().toString() : null"
+            matBadgeColor="warn"
+            matTooltip="Оповещения"
+            [disabled]="isLoadingNotifications">
+      <mat-icon *ngIf="!isLoadingNotifications">notifications</mat-icon>
+      <mat-spinner *ngIf="isLoadingNotifications" diameter="20"></mat-spinner>
+    </button>
+
+    <mat-menu #notificationsMenu="matMenu" class="notifications-menu" (closed)="onNotificationsMenuClosed()">
+      <div class="notifications-header">
+        <h3 mat-menu-item>Оповещения</h3>
+        <button mat-button 
+                *ngIf="getUnreadNotificationsCount() > 0"
+                (click)="markAllNotificationsAsRead()"
+                class="mark-all-read-btn">
+          Отметить все как прочитанные
+        </button>
+      </div>
+      
+      <mat-divider></mat-divider>
+      
+      <div class="notifications-list">
+        <div *ngIf="notifications.length === 0" class="no-notifications">
+          <mat-icon>notifications_none</mat-icon>
+          <p>Нет оповещений</p>
+        </div>
+        
+        <div *ngFor="let notification of notifications" 
+             class="notification-item"
+             [class.unread]="!notification.read"
+             (click)="onNotificationClick(notification)">
+          <div class="notification-content">
+            <div class="notification-message">{{notification.message}}</div>
+            <div class="notification-meta">
+              <span class="notification-time">{{formatNotificationTime(notification.created)}}</span>
+              <span class="notification-question">
+                <mat-icon class="question-icon">open_in_new</mat-icon>
+                Вопрос #{{notification.qId}}
+              </span>
+            </div>
+          </div>
+          <div class="notification-status">
+            <mat-icon *ngIf="!notification.read" class="unread-indicator">fiber_manual_record</mat-icon>
+          </div>
+        </div>
+      </div>
+    </mat-menu>
+    
     <button mat-icon-button (click)="logout()" matTooltip="Выйти">
       <mat-icon>logout</mat-icon>
     </button>
   </mat-toolbar>
 
   <div class="content-container">
+    <!-- Панель статистики -->
+    <div class="statistics-panel">
+      <mat-card class="statistics-card">
+        <mat-card-content>
+          <div class="statistics-grid">
+            <div *ngFor="let stat of getStatusStatistics()" class="stat-item">
+              <div class="stat-icon" [style.color]="stat.color">{{stat.icon}}</div>
+              <div class="stat-info">
+                <div class="stat-count">{{stat.count}}</div>
+                <div class="stat-label">{{stat.status}}</div>
+              </div>
+            </div>
+          </div>
+        </mat-card-content>
+      </mat-card>
+    </div>
+
     <div class="questions-layout">
       <!-- Левая панель со списком вопросов -->
       <div class="questions-sidebar">
@@ -20,22 +88,22 @@
 
           <mat-card-content>
             <div *ngIf="isLoading" class="loading-container">
-              <mat-spinner diameter="40"></mat-spinner>
-              <p>Загрузка вопросов...</p>
+              <mat-spinner diameter="30"></mat-spinner>
+              <p style="font-size: 12px; margin-top: 8px;">Загрузка...</p>
             </div>
 
             <div *ngIf="error && !isLoading" class="error-container">
-              <mat-icon color="warn">error</mat-icon>
-              <p>{{error}}</p>
-              <button mat-raised-button color="primary" (click)="loadQuestions()">
+              <mat-icon color="warn" style="font-size: 20px;">error</mat-icon>
+              <p style="font-size: 12px;">{{error}}</p>
+              <button mat-raised-button color="primary" (click)="loadQuestions()" style="font-size: 12px;">
                 Попробовать снова
               </button>
             </div>
 
             <div *ngIf="!isLoading && !error">
               <div *ngIf="questions.length === 0" class="empty-state">
-                <mat-icon>quiz</mat-icon>
-                <p>Вопросы не найдены</p>
+                <mat-icon style="font-size: 20px;">quiz</mat-icon>
+                <p style="font-size: 12px;">Вопросы не найдены</p>
               </div>
 
               <mat-list *ngIf="questions.length > 0" class="questions-list">

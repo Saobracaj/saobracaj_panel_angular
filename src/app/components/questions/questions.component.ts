@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
@@ -10,10 +10,13 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatBadgeModule } from '@angular/material/badge';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatDividerModule } from '@angular/material/divider';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatMenu } from '@angular/material/menu';
 import { Router, ActivatedRoute } from '@angular/router';
 import { AuthService, Comment, CommentNotification } from '../../services/auth.service';
 import { CommentService, CommentDetail } from '../../services/comment.service';
 import { MarkdownEditorComponent } from '../markdown-editor/markdown-editor.component';
+import { interval, Subscription } from 'rxjs';
 
 interface Question {
   qId: number;
@@ -59,12 +62,13 @@ interface QuestionStatus {
     MatBadgeModule,
     MatMenuModule,
     MatDividerModule,
+    MatTooltipModule,
     MarkdownEditorComponent
   ],
   templateUrl: './questions.component.html',
   styleUrl: './questions.component.scss'
 })
-export class QuestionsComponent implements OnInit {
+export class QuestionsComponent implements OnInit, OnDestroy {
   questions: Question[] = [];
   russianTranslations: RussianTranslation[] = [];
   questionStatuses: QuestionStatus[] = [];
@@ -73,6 +77,15 @@ export class QuestionsComponent implements OnInit {
   error: string | null = null;
   statusesError: string | null = null;
   selectedQuestionId: number | null = null;
+  
+  // Свойства для оповещений
+  notifications: CommentNotification[] = [];
+  isLoadingNotifications: boolean = false;
+  notificationsError: string | null = null;
+  private notificationsSubscription: Subscription | null = null;
+  private notificationsTimer: Subscription | null = null;
+  
+  @ViewChild('notificationsMenu') notificationsMenu!: MatMenu;
 
   constructor(
     private authService: AuthService,
@@ -84,6 +97,8 @@ export class QuestionsComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadQuestions();
+    this.loadNotifications();
+    this.startNotificationsTimer();
     
     // Подписываемся на изменения параметров URL
     this.route.params.subscribe(params => {
@@ -92,6 +107,15 @@ export class QuestionsComponent implements OnInit {
         this.selectQuestion(questionId);
       }
     });
+  }
+
+  ngOnDestroy(): void {
+    if (this.notificationsSubscription) {
+      this.notificationsSubscription.unsubscribe();
+    }
+    if (this.notificationsTimer) {
+      this.notificationsTimer.unsubscribe();
+    }
   }
 
   loadQuestions(): void {
@@ -107,7 +131,8 @@ export class QuestionsComponent implements OnInit {
         return response.json();
       })
       .then((questions: Question[]) => {
-        this.questions = questions;
+        // Фильтруем вопросы, исключая категорию 38
+        this.questions = questions.filter(q => q.categoryId !== '38');
         
         // Загружаем русские переводы
         return this.loadRussianTranslations();
@@ -115,7 +140,7 @@ export class QuestionsComponent implements OnInit {
       .then(() => {
         this.isLoading = false;
         
-        // Создаем статусы по умолчанию (PENDING) для всех вопросов
+        // Создаем статусы по умолчанию (PENDING) для отфильтрованных вопросов
         this.questionStatuses = this.questions.map(q => ({
           id: q.qId.toString(),
           status: 'PENDING' as const
@@ -233,6 +258,150 @@ export class QuestionsComponent implements OnInit {
     });
   }
 
+  loadNotifications(): void {
+    this.isLoadingNotifications = true;
+    this.notificationsError = null;
+
+    this.notificationsSubscription = this.authService.getCommentNotifications().subscribe({
+      next: (notifications) => {
+        this.notifications = notifications;
+        this.isLoadingNotifications = false;
+      },
+      error: (error) => {
+        this.notificationsError = 'Ошибка загрузки оповещений';
+        this.isLoadingNotifications = false;
+        
+        // Если токен истек, попробуем обновить его
+        if (error.graphQLErrors?.some((e: any) => e.extensions?.code === 'token_expired')) {
+          this.refreshTokenAndRetry();
+        }
+      }
+    });
+  }
+
+  startNotificationsTimer(): void {
+    // Отписываемся от предыдущего таймера, если он существует
+    if (this.notificationsTimer) {
+      this.notificationsTimer.unsubscribe();
+    }
+    
+    // Обновляем оповещения каждые 15 секунд
+    this.notificationsTimer = interval(15000).subscribe(() => {
+      this.loadNotifications();
+    });
+  }
+
+  markNotificationsAsRead(): void {
+    if (this.notifications.length === 0) {
+      this.snackBar.open('Нет оповещений', 'Закрыть', {
+        duration: 2000
+      });
+      return;
+    }
+
+    // Находим непрочитанные оповещения
+    const unreadNotifications = this.notifications.filter(n => !n.read);
+    
+    if (unreadNotifications.length === 0) {
+      this.snackBar.open('Все оповещения прочитаны', 'Закрыть', {
+        duration: 2000
+      });
+      return;
+    }
+
+    // Берем время создания самого нового оповещения
+    const latestNotification = unreadNotifications.reduce((latest, current) => {
+      return current.created > latest.created ? current : latest;
+    });
+
+    this.authService.readNotifications(latestNotification.created.toString()).subscribe({
+      next: (updatedNotifications) => {
+        // Обновляем локальный список оповещений
+        this.notifications = updatedNotifications;
+        this.snackBar.open('Оповещения помечены как прочитанные', 'Закрыть', {
+          duration: 2000
+        });
+      },
+      error: (error) => {
+        this.snackBar.open('Ошибка при обновлении оповещений', 'Закрыть', {
+          duration: 3000
+        });
+      }
+    });
+  }
+
+  getUnreadNotificationsCount(): number {
+    return this.notifications.filter(n => !n.read).length;
+  }
+
+  markAllNotificationsAsRead(): void {
+    if (this.notifications.length === 0) {
+      this.snackBar.open('Нет оповещений для отметки', 'Закрыть', {
+        duration: 2000
+      });
+      return;
+    }
+
+    const unreadNotifications = this.notifications.filter(n => !n.read);
+    if (unreadNotifications.length === 0) {
+      this.snackBar.open('Все оповещения уже прочитаны', 'Закрыть', {
+        duration: 2000
+      });
+      return;
+    }
+
+    // Берем время создания самого нового оповещения
+    const latestNotification = unreadNotifications.reduce((latest, current) => {
+      return current.created > latest.created ? current : latest;
+    });
+
+    this.authService.readNotifications(latestNotification.created.toString()).subscribe({
+      next: (updatedNotifications) => {
+        this.notifications = updatedNotifications;
+        this.snackBar.open('Все оповещения помечены как прочитанные', 'Закрыть', {
+          duration: 2000
+        });
+      },
+      error: (error) => {
+        this.snackBar.open('Ошибка при обновлении оповещений', 'Закрыть', {
+          duration: 3000
+        });
+      }
+    });
+  }
+
+  formatNotificationTime(timestamp: number): string {
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60));
+    
+    if (diffInMinutes < 1) {
+      return 'Только что';
+    } else if (diffInMinutes < 60) {
+      return `${diffInMinutes} мин назад`;
+    } else if (diffInMinutes < 1440) {
+      const hours = Math.floor(diffInMinutes / 60);
+      return `${hours} ч назад`;
+    } else {
+      const days = Math.floor(diffInMinutes / 1440);
+      return `${days} дн назад`;
+    }
+  }
+
+  onNotificationClick(notification: CommentNotification): void {
+    // Переходим к соответствующему вопросу
+    this.selectQuestion(notification.qId);
+    
+    // Показываем уведомление о переходе
+    this.snackBar.open(`Переход к вопросу #${notification.qId}`, 'Закрыть', {
+      duration: 2000
+    });
+  }
+
+  onNotificationsMenuClosed(): void {
+    // Меню оповещений закрыто - можно добавить дополнительную логику при необходимости
+  }
+
 
 
   getStatusIcon(status: string): string {
@@ -302,6 +471,7 @@ export class QuestionsComponent implements OnInit {
         // Повторяем запросы после обновления токена
         this.loadQuestions();
         this.loadQuestionStatuses();
+        this.loadNotifications();
       },
       error: (refreshError) => {
         console.error('Ошибка обновления токена:', refreshError);
@@ -335,5 +505,30 @@ export class QuestionsComponent implements OnInit {
     } else {
       console.log(`Не найден вопрос с ID ${comment.id} для обновления статуса`);
     }
+  }
+
+  getStatusStatistics(): { status: string; count: number; icon: string; color: string }[] {
+    const stats = {
+      'PENDING': 0,
+      'DRAFT': 0,
+      'MODERATION': 0,
+      'READY': 0
+    };
+
+    // Учитываем только статусы отфильтрованных вопросов
+    this.questionStatuses.forEach(status => {
+      // Проверяем, что вопрос с этим статусом существует в отфильтрованном списке
+      const questionExists = this.questions.some(q => q.qId.toString() === status.id);
+      if (questionExists && stats.hasOwnProperty(status.status)) {
+        stats[status.status as keyof typeof stats]++;
+      }
+    });
+
+    return [
+      { status: 'PENDING', count: stats.PENDING, icon: '⏳', color: 'orange' },
+      { status: 'DRAFT', count: stats.DRAFT, icon: '📝', color: 'gray' },
+      { status: 'MODERATION', count: stats.MODERATION, icon: '👁️', color: 'blue' },
+      { status: 'READY', count: stats.READY, icon: '✅', color: 'green' }
+    ];
   }
 } 

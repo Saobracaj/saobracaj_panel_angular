@@ -15,9 +15,9 @@ export interface Comment {
 
 export interface CommentNotification {
   id: string;
-  created: string;
+  created: number;
   message: string;
-  qId: string;
+  qId: number;
   read: boolean;
 }
 
@@ -135,15 +135,16 @@ export class AuthService {
     `;
 
     return this.apollo.query<{ commentNotifications: CommentNotification[] }>({
-      query: NOTIFICATIONS_QUERY
+      query: NOTIFICATIONS_QUERY,
+      fetchPolicy: 'network-only' // Принудительно загружаем с сервера
     }).pipe(
       map(result => result.data.commentNotifications)
     );
   }
 
-  readNotifications(lastReadTime: string): Observable<CommentNotification[]> {
+  readNotifications(lastReadTime: string | null): Observable<CommentNotification[]> {
     const READ_NOTIFICATIONS_MUTATION = gql`
-      mutation ReadNotifications($lastReadTime: String!) {
+      mutation ReadNotifications($lastReadTime: Long) {
         readNotifications(lastReadTime: $lastReadTime) {
           created
           id
@@ -156,7 +157,7 @@ export class AuthService {
 
     return this.apollo.mutate<{ readNotifications: CommentNotification[] }>({
       mutation: READ_NOTIFICATIONS_MUTATION,
-      variables: { lastReadTime }
+      variables: { lastReadTime: lastReadTime ? parseInt(lastReadTime) : null }
     }).pipe(
       map(result => result.data!.readNotifications)
     );
