@@ -190,4 +190,23 @@ export class CommentService {
       map(result => result.data!.applyDraft)
     );
   }
+
+  addInnerMessage(id: string | number, message: string): Observable<InnerMessage[]> {
+    const ADD_INNER_MESSAGE_MUTATION = gql`
+      mutation AddInnerMessage($id: Long!, $message: String!) {
+        addInnerMessage(id: $id, message: $message) {
+          created
+          message
+          ownerId
+        }
+      }
+    `;
+
+    return this.apollo.mutate<{ addInnerMessage: InnerMessage[] }>({
+      mutation: ADD_INNER_MESSAGE_MUTATION,
+      variables: { id: typeof id === 'string' ? parseInt(id, 10) : id, message }
+    }).pipe(
+      map(result => result.data!.addInnerMessage)
+    );
+  }
 } 

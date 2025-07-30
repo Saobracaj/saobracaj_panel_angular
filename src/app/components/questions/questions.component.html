@@ -217,6 +217,65 @@
                 [questionId]="selectedQuestionId || ''"
                 (commentUpdated)="onCommentUpdated($event)">
               </app-markdown-editor>
+
+              <!-- Внутренние комментарии -->
+              <div class="inner-messages-section">
+                <h3>Внутренние комментарии ({{innerMessages.length}})</h3>
+                
+                <!-- Поле для добавления нового комментария -->
+                <div class="add-comment-form">
+                  <mat-form-field appearance="outline" class="full-width">
+                    <mat-label>Добавить комментарий</mat-label>
+                    <textarea 
+                      matInput 
+                      [(ngModel)]="newInnerMessage" 
+                      placeholder="Введите комментарий..."
+                      rows="3"
+                      [disabled]="isAddingInnerMessage"
+                      (keydown.enter)="onEnterKeyPress($event)">
+                    </textarea>
+                  </mat-form-field>
+                  
+                  <div class="add-comment-actions">
+                    <button 
+                      mat-raised-button 
+                      color="primary" 
+                      (click)="addInnerMessage()"
+                      [disabled]="!newInnerMessage.trim() || isAddingInnerMessage">
+                      <mat-spinner *ngIf="isAddingInnerMessage" diameter="16"></mat-spinner>
+                      <span *ngIf="!isAddingInnerMessage">Добавить</span>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Список комментариев -->
+                <div class="inner-messages-list">
+                  <div *ngIf="isLoadingInnerMessages" class="loading-messages">
+                    <mat-spinner diameter="30"></mat-spinner>
+                    <p>Загрузка комментариев...</p>
+                  </div>
+
+                  <div *ngIf="!isLoadingInnerMessages && innerMessages.length === 0" class="no-messages">
+                    <mat-icon>chat_bubble_outline</mat-icon>
+                    <p>Нет комментариев</p>
+                  </div>
+
+                  <div *ngIf="!isLoadingInnerMessages && innerMessages.length > 0" class="messages-container">
+                    <div *ngFor="let message of innerMessages" class="message-item" 
+                         [style.border-left-color]="getUserColor(message.ownerId)">
+                      <div class="message-header">
+                        <span class="message-owner" [style.color]="getUserColor(message.ownerId)">
+                          {{message.ownerId}}
+                        </span>
+                        <span class="message-time">{{formatInnerMessageTime(message.created)}}</span>
+                      </div>
+                      <div class="message-content">
+                        {{message.message}}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </mat-card-content>
         </mat-card>

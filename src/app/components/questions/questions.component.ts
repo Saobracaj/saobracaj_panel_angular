@@ -12,9 +12,13 @@ import { MatMenuModule } from '@angular/material/menu';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatMenu } from '@angular/material/menu';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatChipsModule } from '@angular/material/chips';
+import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
 import { AuthService, Comment, CommentNotification } from '../../services/auth.service';
-import { CommentService, CommentDetail } from '../../services/comment.service';
+import { CommentService, CommentDetail, InnerMessage } from '../../services/comment.service';
 import { MarkdownEditorComponent } from '../markdown-editor/markdown-editor.component';
 import { interval, Subscription } from 'rxjs';
 
@@ -63,6 +67,10 @@ interface QuestionStatus {
     MatMenuModule,
     MatDividerModule,
     MatTooltipModule,
+    MatFormFieldModule,
+    MatInputModule,
+    MatChipsModule,
+    FormsModule,
     MarkdownEditorComponent
   ],
   templateUrl: './questions.component.html',
@@ -84,6 +92,12 @@ export class QuestionsComponent implements OnInit, OnDestroy {
   notificationsError: string | null = null;
   private notificationsSubscription: Subscription | null = null;
   private notificationsTimer: Subscription | null = null;
+  
+  // Свойства для внутренних комментариев
+  innerMessages: InnerMessage[] = [];
+  isLoadingInnerMessages: boolean = false;
+  newInnerMessage: string = '';
+  isAddingInnerMessage: boolean = false;
   
   @ViewChild('notificationsMenu') notificationsMenu!: MatMenu;
 
@@ -439,7 +453,8 @@ export class QuestionsComponent implements OnInit, OnDestroy {
     this.selectedQuestionId = questionId;
     // Обновляем URL с ID вопроса
     this.router.navigate(['/questions', questionId], { replaceUrl: true });
-    // Здесь будет логика для отображения контента справа
+    // Загружаем внутренние комментарии для выбранного вопроса
+    this.loadInnerMessages(questionId);
   }
 
   getQuestionStatus(questionId: number): QuestionStatus | undefined {
@@ -530,5 +545,91 @@ export class QuestionsComponent implements OnInit, OnDestroy {
       { status: 'MODERATION', count: stats.MODERATION, icon: '👁️', color: 'blue' },
       { status: 'READY', count: stats.READY, icon: '✅', color: 'green' }
     ];
+  }
+
+  // Методы для работы с внутренними комментариями
+  loadInnerMessages(questionId: number): void {
+    if (!questionId) return;
+    
+    this.isLoadingInnerMessages = true;
+    this.commentService.getComment(questionId).subscribe({
+      next: (comment) => {
+        // Создаем копию массива и сортируем комментарии по времени создания (новые сначала)
+        this.innerMessages = [...(comment.innerMessages || [])].sort((a, b) => 
+          parseInt(b.created) - parseInt(a.created)
+        );
+        this.isLoadingInnerMessages = false;
+      },
+      error: (error) => {
+        console.error('Ошибка загрузки внутренних комментариев:', error);
+        this.isLoadingInnerMessages = false;
+        this.snackBar.open('Ошибка загрузки комментариев', 'Закрыть', {
+          duration: 3000
+        });
+      }
+    });
+  }
+
+  addInnerMessage(): void {
+    if (!this.selectedQuestionId || !this.newInnerMessage.trim()) return;
+    
+    this.isAddingInnerMessage = true;
+    this.commentService.addInnerMessage(this.selectedQuestionId, this.newInnerMessage.trim()).subscribe({
+      next: (messages) => {
+        // Создаем копию массива и сортируем комментарии по времени создания (новые сначала)
+        this.innerMessages = [...messages].sort((a, b) => 
+          parseInt(b.created) - parseInt(a.created)
+        );
+        this.newInnerMessage = '';
+        this.isAddingInnerMessage = false;
+        this.snackBar.open('Комментарий добавлен', 'Закрыть', {
+          duration: 2000
+        });
+      },
+      error: (error) => {
+        console.error('Ошибка добавления комментария:', error);
+        this.isAddingInnerMessage = false;
+        this.snackBar.open('Ошибка добавления комментария', 'Закрыть', {
+          duration: 3000
+        });
+      }
+    });
+  }
+
+  formatInnerMessageTime(timestamp: string): string {
+    const date = new Date(parseInt(timestamp));
+    return date.toLocaleString('ru-RU', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  }
+
+  onEnterKeyPress(event: Event): void {
+    const keyboardEvent = event as KeyboardEvent;
+    if (!keyboardEvent.shiftKey) {
+      event.preventDefault();
+      this.addInnerMessage();
+    }
+  }
+
+  // Генерируем цвет на основе ID пользователя
+  getUserColor(userId: string): string {
+    // Создаем хеш из userId для получения предсказуемого цвета
+    let hash = 0;
+    for (let i = 0; i < userId.length; i++) {
+      const char = userId.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash; // Преобразуем в 32-битное целое
+    }
+    
+    // Используем хеш для генерации более контрастного цвета
+    const hue = Math.abs(hash) % 360;
+    const saturation = 70 + (Math.abs(hash) % 25); // 70-95% (более насыщенные)
+    const lightness = 45 + (Math.abs(hash) % 20); // 45-65% (средняя яркость для лучшего контраста)
+    
+    return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
   }
 } 

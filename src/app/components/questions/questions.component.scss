@@ -542,4 +542,112 @@
     height: 8px;
     color: #f44336;
   }
+}
+
+// Стили для внутренних комментариев
+.inner-messages-section {
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 1px solid #e0e0e0;
+  
+  h3 {
+    margin: 0 0 16px 0;
+    font-size: 18px;
+    font-weight: 500;
+  }
+}
+
+.add-comment-form {
+  margin-bottom: 24px;
+  
+  .full-width {
+    width: 100%;
+  }
+  
+  .add-comment-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 8px;
+    
+    button {
+      min-width: 100px;
+    }
+  }
+}
+
+.inner-messages-list {
+  .loading-messages {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 24px;
+    gap: 8px;
+    
+    p {
+      margin: 0;
+      font-size: 14px;
+      color: #666;
+    }
+  }
+  
+  .no-messages {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 24px;
+    gap: 8px;
+    
+    mat-icon {
+      font-size: 48px;
+      width: 48px;
+      height: 48px;
+      color: #ccc;
+    }
+    
+    p {
+      margin: 0;
+      font-size: 14px;
+      color: #666;
+    }
+  }
+  
+  .messages-container {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  
+  .message-item {
+    padding: 16px;
+    border: 1px solid #e0e0e0;
+    border-left-width: 6px;
+    border-radius: 8px;
+    background-color: #fafafa;
+    
+    .message-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+      
+      .message-owner {
+        font-weight: 600;
+        font-size: 14px;
+        padding: 2px 6px;
+        border-radius: 4px;
+        background-color: rgba(0, 0, 0, 0.05);
+      }
+      
+      .message-time {
+        font-size: 12px;
+        color: #666;
+      }
+    }
+    
+    .message-content {
+      font-size: 14px;
+      line-height: 1.5;
+      white-space: pre-wrap;
+    }
+  }
 } 
