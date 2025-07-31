@@ -101,31 +101,67 @@
             </div>
 
             <div *ngIf="!isLoading && !error">
-              <div *ngIf="questions.length === 0" class="empty-state">
+              <div *ngIf="isLoadingCategories" class="loading-container">
+                <mat-spinner diameter="30"></mat-spinner>
+                <p style="font-size: 12px; margin-top: 8px;">Загрузка категорий...</p>
+              </div>
+
+              <div *ngIf="!isLoadingCategories && categoriesError" class="error-container">
+                <mat-icon color="warn" style="font-size: 20px;">error</mat-icon>
+                <p style="font-size: 12px;">{{categoriesError}}</p>
+                <button mat-raised-button color="primary" (click)="loadCategories()" style="font-size: 12px;">
+                  Попробовать снова
+                </button>
+              </div>
+
+              <div *ngIf="!isLoadingCategories && !categoriesError && questions.length === 0" class="empty-state">
                 <mat-icon style="font-size: 20px;">quiz</mat-icon>
                 <p style="font-size: 12px;">Вопросы не найдены</p>
               </div>
 
-              <mat-list *ngIf="questions.length > 0" class="questions-list">
-                <mat-list-item 
-                  *ngFor="let question of questions; trackBy: trackByQuestionId" 
-                  class="question-item"
-                  [class.selected]="selectedQuestionId === question.qId"
-                  (click)="selectQuestion(question.qId)">
-                  
-                  <div class="question-item-content">
-                    <div class="question-number">
-                      {{question.qId}}
+              <div *ngIf="!isLoadingCategories && !categoriesError && subcategoryGroups.length > 0" class="questions-groups">
+                <div *ngFor="let group of subcategoryGroups" class="question-group">
+                  <!-- Заголовок подкатегории -->
+                  <div class="category-header" 
+                       (click)="toggleSubcategory(getSubcategoryGroupKey(group.categoryId, group.subcategoryId))"
+                       [matTooltip]="getSubcategoryTooltip(group)"
+                       matTooltipClass="subcategory-tooltip"
+                       matTooltipPosition="right">
+                    <div class="category-info">
+                      <mat-icon class="expand-icon" [class.collapsed]="isSubcategoryCollapsed(getSubcategoryGroupKey(group.categoryId, group.subcategoryId))">
+                        expand_more
+                      </mat-icon>
+                      <div class="subcategory-info">
+                        <h4 class="category-title">{{group.categoryName}}</h4>
+                        <p class="subcategory-description">{{group.subcategoryDescription}}</p>
+                      </div>
                     </div>
-                    <div class="question-status">
-                      <span class="status-icon" 
-                            [title]="getQuestionStatus(question.qId)?.status || 'PENDING'">
-                        {{getStatusIcon(getQuestionStatus(question.qId)?.status || 'PENDING')}}
-                      </span>
-                    </div>
+                    <span class="category-count">({{group.questions.length}} вопросов)</span>
                   </div>
-                </mat-list-item>
-              </mat-list>
+                  
+                  <!-- Список вопросов в подкатегории -->
+                  <mat-list class="questions-list" [class.collapsed]="isSubcategoryCollapsed(getSubcategoryGroupKey(group.categoryId, group.subcategoryId))">
+                    <mat-list-item 
+                      *ngFor="let question of group.questions; trackBy: trackByQuestionId" 
+                      class="question-item"
+                      [class.selected]="selectedQuestionId === question.qId"
+                      (click)="selectQuestion(question.qId)">
+                      
+                      <div class="question-item-content">
+                        <div class="question-number">
+                          {{question.qId}}
+                        </div>
+                        <div class="question-status">
+                          <span class="status-icon" 
+                                [title]="getQuestionStatus(question.qId)?.status || 'PENDING'">
+                            {{getStatusIcon(getQuestionStatus(question.qId)?.status || 'PENDING')}}
+                          </span>
+                        </div>
+                      </div>
+                    </mat-list-item>
+                  </mat-list>
+                </div>
+              </div>
             </div>
           </mat-card-content>
         </mat-card>
@@ -210,7 +246,7 @@
                     <strong>Баллов:</strong> {{getSelectedQuestion()?.Points}}
                   </div>
                   <div class="info-item">
-                    <strong>Категория:</strong> {{getSelectedQuestion()?.categoryId}}
+                    <strong>Категория:</strong> {{getCategoryName(getSelectedQuestion()?.categoryId || '')}}
                   </div>
                   <div class="info-item">
                     <strong>Подкатегория:</strong> {{getSelectedQuestion()?.subcategoryId}}

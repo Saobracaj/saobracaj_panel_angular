@@ -153,7 +153,7 @@ export class ZakonService {
     if (item.chapter) params.set('chapter', item.chapter);
     if (item.chlan) params.set('chlan', item.chlan);
     if (item.paragraph) params.set('paragraph', item.paragraph);
-    return `zakon?${params.toString()}`;
+    return `[](zakon?${params.toString()})`;
   }
 
   getChapters(): string[] {

@@ -55,6 +55,23 @@ interface QuestionStatus {
   status: 'PENDING' | 'DRAFT' | 'MODERATION' | 'READY';
 }
 
+interface Category {
+  id: string;
+  name: string;
+  subcategories: Array<{
+    Id: number;
+    Description: string;
+  }>;
+}
+
+interface SubcategoryGroup {
+  categoryId: string;
+  categoryName: string;
+  subcategoryId: number;
+  subcategoryDescription: string;
+  questions: Question[];
+}
+
 @Component({
   selector: 'app-questions',
   standalone: true,
@@ -84,10 +101,15 @@ export class QuestionsComponent implements OnInit, OnDestroy {
   questions: Question[] = [];
   russianTranslations: RussianTranslation[] = [];
   questionStatuses: QuestionStatus[] = [];
+  categories: Category[] = [];
+  subcategoryGroups: SubcategoryGroup[] = [];
+  collapsedSubcategories: Set<string> = new Set();
   isLoading: boolean = true;
   isLoadingStatuses: boolean = false;
+  isLoadingCategories: boolean = false;
   error: string | null = null;
   statusesError: string | null = null;
+  categoriesError: string | null = null;
   selectedQuestionId: number | null = null;
   
   // Свойства для оповещений
@@ -120,6 +142,7 @@ export class QuestionsComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     // Загружаем данные
+    this.loadCategories();
     this.loadQuestions();
     this.loadRussianTranslations();
     this.loadQuestionStatuses();
@@ -155,6 +178,33 @@ export class QuestionsComponent implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
+  loadCategories(): void {
+    this.isLoadingCategories = true;
+    this.categoriesError = null;
+
+    fetch('/categories.json')
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('Ошибка загрузки категорий');
+        }
+        return response.json();
+      })
+      .then((categories: Category[]) => {
+        this.categories = categories;
+        this.isLoadingCategories = false;
+        // Группируем вопросы после загрузки категорий
+        this.groupQuestionsBySubcategory();
+      })
+      .catch(error => {
+        console.error('Ошибка загрузки категорий:', error);
+        this.categoriesError = 'Ошибка загрузки категорий';
+        this.isLoadingCategories = false;
+        this.snackBar.open('Ошибка загрузки категорий', 'Закрыть', {
+          duration: 5000
+        });
+      });
+  }
+
   loadQuestions(): void {
     this.isLoading = true;
     this.error = null;
@@ -185,6 +235,9 @@ export class QuestionsComponent implements OnInit, OnDestroy {
         
         // Теперь загружаем реальные статусы с сервера
         this.loadQuestionStatuses();
+        
+        // Группируем вопросы по подкатегориям
+        this.groupQuestionsBySubcategory();
         
         // После загрузки вопросов проверяем URL
         this.route.params.subscribe(params => {
@@ -231,6 +284,75 @@ export class QuestionsComponent implements OnInit, OnDestroy {
   getRussianChoiceTranslation(questionId: number, choiceIndex: number): string | undefined {
     const translation = this.getRussianTranslation(questionId);
     return translation?.Choices?.[choiceIndex]?.Text;
+  }
+
+  groupQuestionsBySubcategory(): void {
+    if (!this.questions.length || !this.categories.length) {
+      return;
+    }
+
+    // Создаем группы по подкатегориям
+    const groupsMap = new Map<string, SubcategoryGroup>();
+
+    this.questions.forEach(question => {
+      const category = this.getCategoryById(question.categoryId);
+      const categoryName = category ? category.name : `Категория ${question.categoryId}`;
+      
+      // Находим подкатегорию
+      const subcategory = category?.subcategories.find(sub => sub.Id === question.subcategoryId);
+      const subcategoryDescription = subcategory ? subcategory.Description : `Подкатегория ${question.subcategoryId}`;
+      
+      // Создаем уникальный ключ для группы подкатегории
+      const groupKey = `${question.categoryId}-${question.subcategoryId}`;
+
+      if (!groupsMap.has(groupKey)) {
+        groupsMap.set(groupKey, {
+          categoryId: question.categoryId,
+          categoryName: categoryName,
+          subcategoryId: question.subcategoryId,
+          subcategoryDescription: subcategoryDescription,
+          questions: []
+        });
+      }
+
+      groupsMap.get(groupKey)!.questions.push(question);
+    });
+
+    // Преобразуем Map в массив и сортируем по названию категории, затем по описанию подкатегории
+    this.subcategoryGroups = Array.from(groupsMap.values()).sort((a, b) => {
+      const categoryCompare = a.categoryName.localeCompare(b.categoryName);
+      if (categoryCompare !== 0) return categoryCompare;
+      return a.subcategoryDescription.localeCompare(b.subcategoryDescription);
+    });
+  }
+
+  getCategoryById(categoryId: string): Category | undefined {
+    return this.categories.find(cat => cat.id === categoryId);
+  }
+
+  getCategoryName(categoryId: string): string {
+    const category = this.getCategoryById(categoryId);
+    return category ? category.name : `Категория ${categoryId}`;
+  }
+
+  toggleSubcategory(groupKey: string): void {
+    if (this.collapsedSubcategories.has(groupKey)) {
+      this.collapsedSubcategories.delete(groupKey);
+    } else {
+      this.collapsedSubcategories.add(groupKey);
+    }
+  }
+
+  isSubcategoryCollapsed(groupKey: string): boolean {
+    return this.collapsedSubcategories.has(groupKey);
+  }
+
+  getSubcategoryGroupKey(categoryId: string, subcategoryId: number): string {
+    return `${categoryId}-${subcategoryId}`;
+  }
+
+  getSubcategoryTooltip(group: SubcategoryGroup): string {
+    return `${group.categoryName}\n\n${group.subcategoryDescription}`;
   }
 
   loadQuestionStatuses(): void {
@@ -663,4 +785,4 @@ export class QuestionsComponent implements OnInit, OnDestroy {
   showZakon(): void {
     this.isZakonVisible = true;
   }
-} 
+}
