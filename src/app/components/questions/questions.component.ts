@@ -20,6 +20,7 @@ import { Router, ActivatedRoute } from '@angular/router';
 import { AuthService, Comment, CommentNotification } from '../../services/auth.service';
 import { CommentService, CommentDetail, InnerMessage } from '../../services/comment.service';
 import { MarkdownEditorComponent } from '../markdown-editor/markdown-editor.component';
+import { ZakonViewerComponent } from '../zakon-viewer/zakon-viewer.component';
 import { interval, Subscription } from 'rxjs';
 
 interface Question {
@@ -71,7 +72,8 @@ interface QuestionStatus {
     MatInputModule,
     MatChipsModule,
     FormsModule,
-    MarkdownEditorComponent
+    MarkdownEditorComponent,
+    ZakonViewerComponent
   ],
   templateUrl: './questions.component.html',
   styleUrl: './questions.component.scss'
@@ -98,6 +100,9 @@ export class QuestionsComponent implements OnInit, OnDestroy {
   isLoadingInnerMessages: boolean = false;
   newInnerMessage: string = '';
   isAddingInnerMessage: boolean = false;
+  
+  // Видимость колонки с законом
+  isZakonVisible = true;
   
   @ViewChild('notificationsMenu') notificationsMenu!: MatMenu;
 
@@ -631,5 +636,13 @@ export class QuestionsComponent implements OnInit, OnDestroy {
     const lightness = 45 + (Math.abs(hash) % 20); // 45-65% (средняя яркость для лучшего контраста)
     
     return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+  }
+
+  onZakonVisibilityChanged(isVisible: boolean): void {
+    this.isZakonVisible = isVisible;
+  }
+
+  showZakon(): void {
+    this.isZakonVisible = true;
   }
 } 

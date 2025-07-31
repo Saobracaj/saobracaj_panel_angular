@@ -1,9 +1,11 @@
 import { ApplicationConfig, provideZoneChangeDetection } from '@angular/core';
 import { provideRouter } from '@angular/router';
 import { provideClientHydration, withEventReplay } from '@angular/platform-browser';
+import { provideHttpClient, withFetch } from '@angular/common/http';
 import { provideApollo } from 'apollo-angular';
 import { ApolloClientOptions, InMemoryCache, createHttpLink } from '@apollo/client/core';
 import { setContext } from '@apollo/client/link/context';
+import { provideMarkdown } from 'ngx-markdown';
 
 import { routes } from './app.routes';
 
@@ -35,6 +37,8 @@ export const appConfig: ApplicationConfig = {
     provideZoneChangeDetection({ eventCoalescing: true }), 
     provideRouter(routes), 
     provideClientHydration(withEventReplay()),
-    provideApollo(createApollo)
+    provideHttpClient(withFetch()),
+    provideApollo(createApollo),
+    provideMarkdown()
   ]
 };

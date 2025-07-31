@@ -131,8 +131,8 @@
         </mat-card>
       </div>
 
-      <!-- Правая панель для контента -->
-      <div class="content-panel">
+      <!-- Центральная панель для контента вопроса -->
+      <div class="content-panel" [class.zakon-hidden]="!isZakonVisible">
         <mat-card class="content-card">
           <mat-card-header>
             <mat-card-title>
@@ -144,6 +144,15 @@
               {{getSelectedQuestion()?.ChoicesReq}} ответ(ов) | 
               {{getSelectedQuestion()?.Points}} балл(ов)
             </mat-card-subtitle>
+            
+            <!-- Кнопка показа закона, когда он скрыт -->
+            <button *ngIf="!isZakonVisible" 
+                    mat-button 
+                    (click)="showZakon()"
+                    matTooltip="Показать закон"
+                    class="show-zakon-btn">
+              Показать закон
+            </button>
           </mat-card-header>
 
           <mat-card-content>
@@ -279,6 +288,14 @@
             </div>
           </mat-card-content>
         </mat-card>
+      </div>
+
+      <!-- Правая панель для просмотра закона -->
+      <div class="zakon-panel" [class.hidden]="!isZakonVisible">
+        <app-zakon-viewer 
+          [isVisible]="isZakonVisible"
+          (visibilityChanged)="onZakonVisibilityChanged($event)">
+        </app-zakon-viewer>
       </div>
     </div>
   </div>

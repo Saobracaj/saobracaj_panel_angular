@@ -1,0 +1,78 @@
+<mat-card class="zakon-viewer-card">
+  <mat-card-header>
+    <mat-card-title>
+      Закон о безопасности дорожного движения
+    </mat-card-title>
+    
+    <!-- Кнопка скрыть/показать -->
+    <button mat-button 
+            (click)="toggleVisibility()"
+            matTooltip="Скрыть/показать колонку с законом"
+            class="toggle-btn">
+      {{isVisible ? 'Скрыть закон' : 'Показать закон'}}
+    </button>
+  </mat-card-header>
+
+  <mat-card-content>
+    <!-- Панель управления -->
+    <div class="controls-panel">
+      <!-- Переключение языка -->
+      <button mat-button 
+              [color]="currentLanguage === 'sr' ? 'primary' : 'basic'"
+              (click)="toggleLanguage()"
+              matTooltip="Переключить язык"
+              class="language-btn">
+        {{currentLanguage === 'sr' ? 'SR' : 'RU'}}
+      </button>
+
+      <!-- Поле для вставки ссылки -->
+      <mat-form-field appearance="outline" class="link-field">
+        <mat-label>Вставить ссылку</mat-label>
+        <input matInput 
+               [(ngModel)]="linkInput" 
+               (keydown.enter)="navigateToLink()"
+               placeholder="Вставьте ссылку и нажмите Enter">
+        <button mat-icon-button 
+                matSuffix 
+                (click)="navigateToLink()"
+                matTooltip="Перейти к параграфу">
+          <mat-icon>link</mat-icon>
+        </button>
+      </mat-form-field>
+    </div>
+
+
+
+    <!-- Загрузка -->
+    <div *ngIf="isLoading" class="loading-container">
+      <mat-spinner diameter="40"></mat-spinner>
+      <p>Загрузка данных закона...</p>
+    </div>
+
+    <!-- Ошибка -->
+    <div *ngIf="error && !isLoading" class="error-container">
+      <mat-icon color="warn">error</mat-icon>
+      <p>{{error}}</p>
+    </div>
+
+    <!-- Содержимое закона -->
+    <div *ngIf="!isLoading && !error" class="zakon-content">
+      <!-- Список элементов закона -->
+      <div class="zakon-items">
+        <div *ngFor="let item of filteredData; let i = index" 
+             class="zakon-item"
+             [class.title-item]="item.isTitle">
+          <div class="item-content">
+            <markdown [data]="getDisplayText(item)" [inline]="false"></markdown>
+          </div>
+          <button mat-icon-button 
+                  (click)="copyLink(item)"
+                  matTooltip="Копировать ссылку на этот параграф"
+                  class="copy-link-btn">
+            <mat-icon>link</mat-icon>
+          </button>
+        </div>
+      </div>
+    </div>
+  </mat-card-content>
+</mat-card> 
