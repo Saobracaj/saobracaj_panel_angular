@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ViewChild } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
@@ -22,6 +22,9 @@ import { CommentService, CommentDetail, InnerMessage } from '../../services/comm
 import { ZakonService, ZakonNavigationRequest } from '../../services/zakon.service';
 import { MarkdownEditorComponent } from '../markdown-editor/markdown-editor.component';
 import { ZakonViewerComponent } from '../zakon-viewer/zakon-viewer.component';
+import { QuestionPreviewOverlayComponent } from '../question-preview-overlay/question-preview-overlay.component';
+import { Overlay, OverlayRef } from '@angular/cdk/overlay';
+import { ComponentPortal } from '@angular/cdk/portal';
 import { interval, Subscription, Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 
@@ -92,7 +95,8 @@ interface SubcategoryGroup {
     MatChipsModule,
     FormsModule,
     MarkdownEditorComponent,
-    ZakonViewerComponent
+    ZakonViewerComponent,
+    QuestionPreviewOverlayComponent
   ],
   templateUrl: './questions.component.html',
   styleUrl: './questions.component.scss'
@@ -104,6 +108,7 @@ export class QuestionsComponent implements OnInit, OnDestroy {
   categories: Category[] = [];
   subcategoryGroups: SubcategoryGroup[] = [];
   collapsedSubcategories: Set<string> = new Set();
+  private overlayRef: OverlayRef | null = null;
   isLoading: boolean = true;
   isLoadingStatuses: boolean = false;
   isLoadingCategories: boolean = false;
@@ -137,7 +142,8 @@ export class QuestionsComponent implements OnInit, OnDestroy {
     private zakonService: ZakonService,
     private router: Router,
     private route: ActivatedRoute,
-    private snackBar: MatSnackBar
+    private snackBar: MatSnackBar,
+    private overlay: Overlay
   ) {}
 
   ngOnInit(): void {
@@ -353,6 +359,63 @@ export class QuestionsComponent implements OnInit, OnDestroy {
 
   getSubcategoryTooltip(group: SubcategoryGroup): string {
     return `${group.categoryName}\n\n${group.subcategoryDescription}`;
+  }
+
+  showQuestionPreview(question: Question, event: MouseEvent): void {
+    // Закрываем предыдущий overlay, если он открыт
+    this.hideQuestionPreview();
+    
+    const russianTranslation = this.getRussianTranslation(question.qId);
+    
+    // Создаем overlay
+    const overlayRef = this.overlay.create({
+      positionStrategy: this.overlay.position()
+        .flexibleConnectedTo(event.target as HTMLElement)
+        .withPositions([
+          {
+            originX: 'end',
+            originY: 'top',
+            overlayX: 'start',
+            overlayY: 'top',
+            offsetX: 10,
+            offsetY: -50
+          },
+          {
+            originX: 'end',
+            originY: 'bottom',
+            overlayX: 'start',
+            overlayY: 'bottom',
+            offsetX: 10,
+            offsetY: 10
+          }
+        ]),
+      scrollStrategy: this.overlay.scrollStrategies.reposition(),
+      hasBackdrop: false,
+      backdropClass: 'cdk-overlay-transparent-backdrop'
+    });
+    
+    // Создаем портал с компонентом предпросмотра
+    const portal = new ComponentPortal(QuestionPreviewOverlayComponent);
+    const componentRef = overlayRef.attach(portal);
+    
+    // Устанавливаем данные для компонента
+    componentRef.instance.question = question;
+    componentRef.instance.russianTranslation = russianTranslation;
+    
+    // Сохраняем ссылку на overlay
+    this.overlayRef = overlayRef;
+    
+    // Закрываем overlay при клике вне его
+    overlayRef.outsidePointerEvents().subscribe(() => {
+      this.hideQuestionPreview();
+    });
+  }
+
+  hideQuestionPreview(): void {
+    if (this.overlayRef) {
+      this.overlayRef.dispose();
+      this.overlayRef = null;
+    }
   }
 
   loadQuestionStatuses(): void {
