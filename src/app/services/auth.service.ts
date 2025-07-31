@@ -142,9 +142,9 @@ export class AuthService {
     );
   }
 
-  readNotifications(lastReadTime: string | null): Observable<CommentNotification[]> {
+  readNotifications(lastReadTime: string): Observable<CommentNotification[]> {
     const READ_NOTIFICATIONS_MUTATION = gql`
-      mutation ReadNotifications($lastReadTime: Long) {
+      mutation ReadNotifications($lastReadTime: Long!) {
         readNotifications(lastReadTime: $lastReadTime) {
           created
           id
@@ -157,7 +157,7 @@ export class AuthService {
 
     return this.apollo.mutate<{ readNotifications: CommentNotification[] }>({
       mutation: READ_NOTIFICATIONS_MUTATION,
-      variables: { lastReadTime: lastReadTime ? parseInt(lastReadTime) : null }
+      variables: { lastReadTime: parseInt(lastReadTime) }
     }).pipe(
       map(result => result.data!.readNotifications)
     );

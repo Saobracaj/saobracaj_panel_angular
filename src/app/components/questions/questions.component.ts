@@ -232,12 +232,12 @@ export class QuestionsComponent implements OnInit, OnDestroy {
           
           // Логируем только если комментарий найден или для первых 5 вопросов
           if (comment || question.qId <= 7925) {
-            console.log(`Поиск комментария для вопроса ${question.qId}:`, {
-              questionId: question.qId,
-              foundComment: comment,
-              commentId: comment?.id,
-              status: comment?.status || 'PENDING'
-            });
+            // console.log(`Поиск комментария для вопроса ${question.qId}:`, {
+            //   questionId: question.qId,
+            //   foundComment: comment,
+            //   commentId: comment?.id,
+            //   status: comment?.status || 'PENDING'
+            // });
           }
           
           return {
