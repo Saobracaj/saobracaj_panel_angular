@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, of } from 'rxjs';
+import { Observable, of, Subject } from 'rxjs';
 import { map, catchError } from 'rxjs/operators';
 
 export interface ZakonItem {
@@ -18,14 +18,65 @@ export interface ZakonSearchResult {
   matchText: string;
 }
 
+export interface ZakonNavigationRequest {
+  link: string;
+  showPanel?: boolean;
+}
+
 @Injectable({
   providedIn: 'root'
 })
 export class ZakonService {
   private zakonData: ZakonItem[] = [];
   private isLoaded = false;
+  
+  // Subject для коммуникации между компонентами
+  private navigationRequestSubject = new Subject<ZakonNavigationRequest>();
+  public navigationRequest$ = this.navigationRequestSubject.asObservable();
 
   constructor(private http: HttpClient) {}
+
+  // Метод для запроса навигации по ссылке
+  navigateToLink(link: string, showPanel: boolean = true): void {
+    this.navigationRequestSubject.next({ link, showPanel });
+  }
+
+  // Метод для парсинга ссылки на закон
+  parseZakonLink(url: string): { chapter?: string; chlan?: string; paragraph?: string } | null {
+    try {
+      // Если ссылка содержит полный URL с доменом, извлекаем только часть с параметрами
+      let linkToParse = url;
+      
+      // Проверяем, содержит ли ссылка домен и zakon
+      if (url.includes('zakon') && (url.includes('http://') || url.includes('https://'))) {
+        // Извлекаем часть после /zakon
+        const zakonIndex = url.indexOf('/zakon');
+        if (zakonIndex !== -1) {
+          linkToParse = url.substring(zakonIndex + 1); // +1 чтобы убрать /
+        }
+      }
+      
+      // Если ссылка не содержит протокол, добавляем базовый URL для парсинга
+      if (!linkToParse.startsWith('http')) {
+        linkToParse = 'http://localhost' + (linkToParse.startsWith('/') ? '' : '/') + linkToParse;
+      }
+      
+      const urlObj = new URL(linkToParse);
+      const chapter = urlObj.searchParams.get('chapter') || undefined;
+      const chlan = urlObj.searchParams.get('chlan') || undefined;
+      const paragraph = urlObj.searchParams.get('paragraph') || undefined;
+      
+      // Возвращаем результат только если есть хотя бы один параметр
+      if (chapter || chlan || paragraph) {
+        return { chapter, chlan, paragraph };
+      }
+      
+      return null;
+    } catch (error) {
+      console.error('Ошибка парсинга ссылки:', error);
+      return null;
+    }
+  }
 
   loadZakonData(): Observable<ZakonItem[]> {
     if (this.isLoaded) {

@@ -19,9 +19,11 @@ import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
 import { AuthService, Comment, CommentNotification } from '../../services/auth.service';
 import { CommentService, CommentDetail, InnerMessage } from '../../services/comment.service';
+import { ZakonService, ZakonNavigationRequest } from '../../services/zakon.service';
 import { MarkdownEditorComponent } from '../markdown-editor/markdown-editor.component';
 import { ZakonViewerComponent } from '../zakon-viewer/zakon-viewer.component';
-import { interval, Subscription } from 'rxjs';
+import { interval, Subscription, Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
 
 interface Question {
   qId: number;
@@ -94,6 +96,7 @@ export class QuestionsComponent implements OnInit, OnDestroy {
   notificationsError: string | null = null;
   private notificationsSubscription: Subscription | null = null;
   private notificationsTimer: Subscription | null = null;
+  private destroy$ = new Subject<void>();
   
   // Свойства для внутренних комментариев
   innerMessages: InnerMessage[] = [];
@@ -109,15 +112,28 @@ export class QuestionsComponent implements OnInit, OnDestroy {
   constructor(
     private authService: AuthService,
     private commentService: CommentService,
+    private zakonService: ZakonService,
     private router: Router,
     private route: ActivatedRoute,
     private snackBar: MatSnackBar
   ) {}
 
   ngOnInit(): void {
+    // Загружаем данные
     this.loadQuestions();
+    this.loadRussianTranslations();
+    this.loadQuestionStatuses();
     this.loadNotifications();
     this.startNotificationsTimer();
+    
+    // Подписываемся на запросы навигации по закону
+    this.zakonService.navigationRequest$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(request => {
+        if (request.showPanel && !this.isZakonVisible) {
+          this.showZakon();
+        }
+      });
     
     // Подписываемся на изменения параметров URL
     this.route.params.subscribe(params => {
@@ -135,6 +151,8 @@ export class QuestionsComponent implements OnInit, OnDestroy {
     if (this.notificationsTimer) {
       this.notificationsTimer.unsubscribe();
     }
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
   loadQuestions(): void {

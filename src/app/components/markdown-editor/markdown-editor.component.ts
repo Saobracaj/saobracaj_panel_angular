@@ -7,6 +7,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { Subject, debounceTime, distinctUntilChanged, takeUntil } from 'rxjs';
 import { CommentService, CommentDetail } from '../../services/comment.service';
+import { ZakonService } from '../../services/zakon.service';
 import { SimpleMDEDirective } from '../../directives/simplemde.directive';
 
 @Component({
@@ -33,12 +34,14 @@ export class MarkdownEditorComponent implements OnInit, OnDestroy, OnChanges {
   isSaving: boolean = false;
   isApplying: boolean = false;
   commentDetail: CommentDetail | null = null;
+  foundLinks: LinkInfo[] = [];
   
   private contentChangeSubject = new Subject<string>();
   private destroy$ = new Subject<void>();
 
   constructor(
     private commentService: CommentService,
+    private zakonService: ZakonService,
     private snackBar: MatSnackBar
   ) {
     // Настройка автоматического сохранения с задержкой
@@ -50,6 +53,14 @@ export class MarkdownEditorComponent implements OnInit, OnDestroy, OnChanges {
       )
       .subscribe(content => {
         this.saveDraft(content);
+      });
+
+      this.contentChangeSubject
+      .pipe(
+        takeUntil(this.destroy$)
+      )
+      .subscribe(content => {
+        this.extractLinks(content);
       });
   }
 
@@ -95,6 +106,7 @@ export class MarkdownEditorComponent implements OnInit, OnDestroy, OnChanges {
         this.commentDetail = comment;
         // Загружаем черновик, если есть, иначе основной текст
         this.loadEditorContent(comment);
+        this.extractLinks(this.editorContent);
         this.isLoading = false;
       },
       error: (error) => {
@@ -135,6 +147,59 @@ export class MarkdownEditorComponent implements OnInit, OnDestroy, OnChanges {
     this.editorContent = content;
     // Отправляем в Subject для автоматического сохранения
     this.contentChangeSubject.next(content);
+  }
+
+  extractLinks(content: string): void {
+    this.foundLinks = this.extractLinksFromMarkdown(content);
+  }
+
+  private extractLinksFromMarkdown(content: string): LinkInfo[] {
+    const links: LinkInfo[] = [];
+    const lines = content.split('\n');
+    const processedUrls = new Set<string>(); // Для избежания дубликатов
+    
+    lines.forEach((line, lineIndex) => {
+      // Match markdown links: [text](url) - но исключаем изображения ![alt](url)
+      const markdownLinkRegex = /(?<!!)\[([^\]]+)\]\(([^)]+)\)/g;
+      let match;
+      
+      while ((match = markdownLinkRegex.exec(line)) !== null) {
+        const linkText = match[1];
+        const linkUrl = match[2];
+        
+        // Проверяем, не обрабатывали ли мы уже эту ссылку
+        if (!processedUrls.has(linkUrl)) {
+          processedUrls.add(linkUrl);
+          links.push({ 
+            url: linkUrl, 
+            text: linkText,
+            line: lineIndex + 1 
+          });
+        }
+      }
+      
+      // Также ищем обычные URL, но только если они не являются частью markdown ссылок
+      // Используем более точный regex, который исключает URL внутри markdown ссылок
+      const urlRegex = /(?<!\]\()https?:\/\/[^\s\)]+/g;
+      const urlMatches = line.match(urlRegex);
+      if (urlMatches) {
+        urlMatches.forEach(url => {
+          // Убираем возможные закрывающие скобки или другие символы
+          const cleanUrl = url.replace(/[\)\]]+$/, '');
+          
+          if (!processedUrls.has(cleanUrl)) {
+            processedUrls.add(cleanUrl);
+            links.push({ 
+              url: cleanUrl, 
+              text: cleanUrl,
+              line: lineIndex + 1 
+            });
+          }
+        });
+      }
+    });
+    
+    return links;
   }
 
   private saveDraft(content: string): void {
@@ -196,4 +261,31 @@ export class MarkdownEditorComponent implements OnInit, OnDestroy, OnChanges {
         return '';
     }
   }
+
+  onLinkClick(link: LinkInfo): void {
+    // Проверяем, является ли ссылка ссылкой на закон
+    const zakonParams = this.zakonService.parseZakonLink(link.url);
+    
+    if (zakonParams) {
+      // Это ссылка на закон - запрашиваем навигацию
+      this.zakonService.navigateToLink(link.url, true);
+      this.snackBar.open('Переход к закону...', 'Закрыть', {
+        duration: 2000
+      });
+    } else if (link.url.startsWith('http://') || link.url.startsWith('https://')) {
+      // Внешняя ссылка - открываем в новой вкладке
+      window.open(link.url, '_blank');
+    } else {
+      // Неизвестный формат ссылки
+      this.snackBar.open('Неизвестный формат ссылки', 'Закрыть', {
+        duration: 3000
+      });
+    }
+  }
 } 
+
+interface LinkInfo {
+  url: string;
+  text?: string;
+  line?: number;
+}

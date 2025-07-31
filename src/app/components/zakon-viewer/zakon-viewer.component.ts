@@ -14,7 +14,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { FormsModule } from '@angular/forms';
 import { HttpClientModule } from '@angular/common/http';
 import { MarkdownComponent } from 'ngx-markdown';
-import { ZakonService, ZakonItem } from '../../services/zakon.service';
+import { ZakonService, ZakonItem, ZakonNavigationRequest } from '../../services/zakon.service';
 import { Subject, takeUntil } from 'rxjs';
 
 @Component({
@@ -72,6 +72,13 @@ export class ZakonViewerComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.loadZakonData();
+    
+    // Подписываемся на запросы навигации
+    this.zakonService.navigationRequest$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(request => {
+        this.handleNavigationRequest(request);
+      });
   }
 
   ngOnDestroy(): void {
@@ -201,6 +208,43 @@ export class ZakonViewerComponent implements OnInit, OnDestroy {
   toggleVisibility(): void {
     this.isVisible = !this.isVisible;
     this.visibilityChanged.emit(this.isVisible);
+  }
+
+  private handleNavigationRequest(request: ZakonNavigationRequest): void {
+    // Показываем панель, если требуется
+    if (request.showPanel && !this.isVisible) {
+      this.toggleVisibility();
+    }
+    
+    // Парсим ссылку и выполняем навигацию
+    const zakonParams = this.zakonService.parseZakonLink(request.link);
+    if (zakonParams) {
+      this.navigateToZakonParams(zakonParams);
+    }
+  }
+
+  private navigateToZakonParams(params: { chapter?: string; chlan?: string; paragraph?: string }): void {
+    // Ищем подходящий элемент в данных
+    const itemIndex = this.filteredData.findIndex(item => {
+      const chapterMatch = !params.chapter || item.chapter === params.chapter;
+      const chlanMatch = !params.chlan || item.chlan === params.chlan;
+      const paragraphMatch = !params.paragraph || item.paragraph === params.paragraph;
+      
+      return chapterMatch && chlanMatch && paragraphMatch;
+    });
+
+    if (itemIndex === -1) {
+      this.snackBar.open('Параграф не найден', 'Закрыть', { duration: 3000 });
+      return;
+    }
+
+    // Скроллим к элементу
+    this.scrollToItem(itemIndex);
+    
+    // Формируем сообщение о найденном элементе
+    const foundItem = this.filteredData[itemIndex];
+    const message = `Переход к параграфу ${foundItem.chapter || '*'}.${foundItem.chlan || '*'}.${foundItem.paragraph || '*'}`;
+    this.snackBar.open(message, 'Закрыть', { duration: 2000 });
   }
 
 

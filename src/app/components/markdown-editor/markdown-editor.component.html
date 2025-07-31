@@ -21,7 +21,7 @@
         <div class="editor-actions">
           <button 
             mat-raised-button 
-            color="primary" 
+            color="primary" n
             (click)="applyDraft()"
             [disabled]="isApplying || !editorContent.trim()">
             <mat-icon *ngIf="!isApplying">check</mat-icon>
@@ -62,4 +62,38 @@
       </div>
     </div>
   </mat-card-content>
+  <mat-card>
+    <mat-card-content>
+      <div class="links-section">
+        <h4 class="links-title">
+          <mat-icon>link</mat-icon>
+          Найденные ссылки ({{foundLinks.length}})
+        </h4>
+        
+        <div *ngIf="foundLinks.length === 0" class="no-links">
+          <p>Ссылки не найдены</p>
+        </div>
+        
+        <div *ngIf="foundLinks.length > 0" class="links-list">
+          <div *ngFor="let link of foundLinks; let i = index" 
+               class="link-item"
+               (click)="onLinkClick(link)">
+            <div class="link-content">
+              <div class="link-text">
+                <span class="link-number">{{i + 1}}.</span>
+                <span class="link-display-text">{{link.text || link.url}}</span>
+              </div>
+              <div class="link-url">{{link.url}}</div>
+              <div *ngIf="link.line" class="link-line">
+                Строка: {{link.line}}
+              </div>
+            </div>
+            <div class="link-action">
+              <mat-icon>open_in_new</mat-icon>
+            </div>
+          </div>
+        </div>
+      </div>
+    </mat-card-content>
+  </mat-card>
 </mat-card> 
