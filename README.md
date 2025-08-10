@@ -11,7 +11,7 @@ Angular приложение для работы с GraphQL API, включаю�
 - Защищенные маршруты с помощью AuthGuard
 
 ### GraphQL интеграция
-- Подключение к GraphQL серверу на `http://0.0.0.0:8080/graphql`
+- Подключение к GraphQL серверу на `https://saobracaj-serveer-69637270851.europe-west3.run.app/graphql`
 - Автоматическое добавление Bearer токена к запросам
 - Обработка ошибок истекшего токена
 
@@ -28,7 +28,7 @@ Angular приложение для работы с GraphQL API, включаю�
 npm install
 ```
 
-2. Убедитесь, что GraphQL сервер запущен на `http://0.0.0.0:8080/graphql`
+2. Убедитесь, что GraphQL сервер доступен по адресу `https://saobracaj-serveer-69637270851.europe-west3.run.app/graphql`
 
 3. Запустите приложение:
 ```bash

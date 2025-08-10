@@ -8,8 +8,9 @@ import { setContext } from '@apollo/client/link/context';
 import { provideMarkdown } from 'ngx-markdown';
 
 import { routes } from './app.routes';
+import { getGraphQLUrl } from './constants/api.constants';
 
-const uri = 'http://0.0.0.0:8080/graphql';
+const uri = getGraphQLUrl();
 
 export function createApollo(): ApolloClientOptions<any> {
   const http = createHttpLink({

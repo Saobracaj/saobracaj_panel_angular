@@ -418,6 +418,25 @@ export class QuestionsComponent implements OnInit, OnDestroy {
     }
   }
 
+  collapseAllSubcategories(): void {
+    this.subcategoryGroups.forEach(group => {
+      const groupKey = this.getSubcategoryGroupKey(group.categoryId, group.subcategoryId);
+      this.collapsedSubcategories.add(groupKey);
+    });
+  }
+
+  expandAllSubcategories(): void {
+    this.collapsedSubcategories.clear();
+  }
+
+  getCollapsedCount(): number {
+    return this.collapsedSubcategories.size;
+  }
+
+  getTotalSubcategoriesCount(): number {
+    return this.subcategoryGroups.length;
+  }
+
   loadQuestionStatuses(): void {
     this.isLoadingStatuses = true;
     this.statusesError = null;

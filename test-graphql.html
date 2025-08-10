@@ -9,6 +9,16 @@
     <div id="result"></div>
 
     <script>
+        // API Constants
+        const API_CONSTANTS = {
+            SERVER_URL: 'https://saobracaj-serveer-69637270851.europe-west3.run.app',
+            GRAPHQL_ENDPOINT: '/graphql'
+        };
+
+        const getGraphQLUrl = () => {
+            return `${API_CONSTANTS.SERVER_URL}${API_CONSTANTS.GRAPHQL_ENDPOINT}`;
+        };
+
         async function testCommentQuery() {
             const query = `
                 query Comment($id: Long!) {
@@ -36,7 +46,7 @@
             `;
 
             try {
-                const response = await fetch('http://0.0.0.0:8080/graphql', {
+                const response = await fetch(getGraphQLUrl(), {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',

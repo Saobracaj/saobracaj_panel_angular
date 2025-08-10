@@ -106,14 +106,59 @@
   mat-card-header {
     padding: 8px 16px;
     
-    mat-card-title {
-      font-size: 14px;
-      margin-bottom: 4px;
-    }
-    
-    mat-card-subtitle {
-      font-size: 11px;
-      margin-bottom: 0;
+    .card-header-content {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      width: 100%;
+      
+      .card-title-section {
+        flex: 1;
+        
+        mat-card-title {
+          font-size: 14px;
+          margin-bottom: 4px;
+        }
+        
+        mat-card-subtitle {
+          font-size: 11px;
+          margin-bottom: 0;
+        }
+      }
+      
+      .card-actions {
+        display: flex;
+        gap: 2px;
+        margin-left: 8px;
+        
+        button {
+          width: 28px;
+          height: 28px;
+          min-width: 28px;
+          
+          mat-icon {
+            font-size: 16px;
+            width: 16px;
+            height: 16px;
+          }
+        }
+        
+        .collapse-btn {
+          color: #f57c00;
+          
+          &:hover:not(:disabled) {
+            background-color: rgba(245, 124, 0, 0.1);
+          }
+        }
+        
+        .expand-btn {
+          color: #388e3c;
+          
+          &:hover:not(:disabled) {
+            background-color: rgba(56, 142, 60, 0.1);
+          }
+        }
+      }
     }
   }
 }

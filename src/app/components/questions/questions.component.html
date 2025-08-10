@@ -82,8 +82,30 @@
       <div class="questions-sidebar">
         <mat-card class="questions-card">
           <mat-card-header>
-            <mat-card-title>Вопросы</mat-card-title>
-            <mat-card-subtitle>Всего вопросов: {{questions.length}}</mat-card-subtitle>
+            <div class="card-header-content">
+              <div class="card-title-section">
+                <mat-card-title>Вопросы</mat-card-title>
+                <mat-card-subtitle>Всего вопросов: {{questions.length}}</mat-card-subtitle>
+              </div>
+              <div class="card-actions" *ngIf="subcategoryGroups.length > 0">
+                <button mat-icon-button 
+                        color="primary" 
+                        (click)="collapseAllSubcategories()"
+                        [disabled]="getCollapsedCount() === getTotalSubcategoriesCount()"
+                        matTooltip="Свернуть все подкатегории"
+                        class="collapse-btn">
+                  <mat-icon>unfold_less</mat-icon>
+                </button>
+                <button mat-icon-button 
+                        color="primary" 
+                        (click)="expandAllSubcategories()"
+                        [disabled]="getCollapsedCount() === 0"
+                        matTooltip="Развернуть все подкатегории"
+                        class="expand-btn">
+                  <mat-icon>unfold_more</mat-icon>
+                </button>
+              </div>
+            </div>
           </mat-card-header>
 
           <mat-card-content>
