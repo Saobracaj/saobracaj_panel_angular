@@ -4,7 +4,6 @@ import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatToolbarModule } from '@angular/material/toolbar';
-import { MatListModule } from '@angular/material/list';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatBadgeModule } from '@angular/material/badge';
@@ -84,7 +83,6 @@ interface SubcategoryGroup {
     MatButtonModule,
     MatIconModule,
     MatToolbarModule,
-    MatListModule,
     MatProgressSpinnerModule,
     MatBadgeModule,
     MatMenuModule,
@@ -106,6 +104,15 @@ export class QuestionsComponent implements OnInit, OnDestroy {
   russianTranslations: RussianTranslation[] = [];
   questionStatuses: QuestionStatus[] = [];
   private questionStatusMap: Map<string, QuestionStatus> = new Map();
+  private questionIdSet: Set<string> = new Set();
+  // Предвычисляем статистику вместо вызова O(n^2)-метода из шаблона на каждом
+  // цикле change detection.
+  statusStatistics: { status: string; count: number; icon: string; color: string }[] = [
+    { status: 'PENDING', count: 0, icon: '⏳', color: 'orange' },
+    { status: 'DRAFT', count: 0, icon: '📝', color: 'gray' },
+    { status: 'MODERATION', count: 0, icon: '👁️', color: 'blue' },
+    { status: 'READY', count: 0, icon: '✅', color: 'green' }
+  ];
   categories: Category[] = [];
   subcategoryGroups: SubcategoryGroup[] = [];
   collapsedSubcategories: Set<string> = new Set();
@@ -227,7 +234,8 @@ export class QuestionsComponent implements OnInit, OnDestroy {
       .then((questions: Question[]) => {
         // Фильтруем вопросы, исключая категорию 38
         this.questions = questions.filter(q => q.categoryId !== '38');
-        
+        this.questionIdSet = new Set(this.questions.map(q => q.qId.toString()));
+
         // Загружаем русские переводы
         return this.loadRussianTranslations();
       })
@@ -336,6 +344,23 @@ export class QuestionsComponent implements OnInit, OnDestroy {
   private setQuestionStatuses(statuses: QuestionStatus[]): void {
     this.questionStatuses = statuses;
     this.questionStatusMap = new Map(statuses.map(s => [s.id, s]));
+    this.recomputeStatusStatistics();
+  }
+
+  private recomputeStatusStatistics(): void {
+    const counts = { PENDING: 0, DRAFT: 0, MODERATION: 0, READY: 0 };
+    for (const status of this.questionStatuses) {
+      // O(1)-проверка существования вопроса вместо прежнего questions.some(...).
+      if (this.questionIdSet.has(status.id) && counts.hasOwnProperty(status.status)) {
+        counts[status.status as keyof typeof counts]++;
+      }
+    }
+    this.statusStatistics = [
+      { status: 'PENDING', count: counts.PENDING, icon: '⏳', color: 'orange' },
+      { status: 'DRAFT', count: counts.DRAFT, icon: '📝', color: 'gray' },
+      { status: 'MODERATION', count: counts.MODERATION, icon: '👁️', color: 'blue' },
+      { status: 'READY', count: counts.READY, icon: '✅', color: 'green' }
+    ];
   }
 
   getCategoryById(categoryId: string): Category | undefined {
@@ -749,35 +774,11 @@ export class QuestionsComponent implements OnInit, OnDestroy {
     const questionIndex = this.questionStatuses.findIndex(s => s.id === comment.id);
     if (questionIndex !== -1) {
       this.questionStatuses[questionIndex].status = comment.status;
+      this.recomputeStatusStatistics();
       console.log(`Обновлен статус вопроса ${comment.id} на ${comment.status}`);
     } else {
       console.log(`Не найден вопрос с ID ${comment.id} для обновления статуса`);
     }
-  }
-
-  getStatusStatistics(): { status: string; count: number; icon: string; color: string }[] {
-    const stats = {
-      'PENDING': 0,
-      'DRAFT': 0,
-      'MODERATION': 0,
-      'READY': 0
-    };
-
-    // Учитываем только статусы отфильтрованных вопросов
-    this.questionStatuses.forEach(status => {
-      // Проверяем, что вопрос с этим статусом существует в отфильтрованном списке
-      const questionExists = this.questions.some(q => q.qId.toString() === status.id);
-      if (questionExists && stats.hasOwnProperty(status.status)) {
-        stats[status.status as keyof typeof stats]++;
-      }
-    });
-
-    return [
-      { status: 'PENDING', count: stats.PENDING, icon: '⏳', color: 'orange' },
-      { status: 'DRAFT', count: stats.DRAFT, icon: '📝', color: 'gray' },
-      { status: 'MODERATION', count: stats.MODERATION, icon: '👁️', color: 'blue' },
-      { status: 'READY', count: stats.READY, icon: '✅', color: 'green' }
-    ];
   }
 
   // Методы для работы с внутренними комментариями

@@ -65,7 +65,7 @@
       <mat-card class="statistics-card">
         <mat-card-content>
           <div class="statistics-grid">
-            <div *ngFor="let stat of getStatusStatistics()" class="stat-item">
+            <div *ngFor="let stat of statusStatistics" class="stat-item">
               <div class="stat-icon" [style.color]="stat.color">{{stat.icon}}</div>
               <div class="stat-info">
                 <div class="stat-count">{{stat.count}}</div>
@@ -162,28 +162,28 @@
                   </div>
                   
                   <!-- Список вопросов в подкатегории -->
-                  <mat-list class="questions-list" [class.collapsed]="isSubcategoryCollapsed(getSubcategoryGroupKey(group.categoryId, group.subcategoryId))">
-                    <mat-list-item 
-                      *ngFor="let question of group.questions; trackBy: trackByQuestionId" 
+                  <div class="questions-list" [class.collapsed]="isSubcategoryCollapsed(getSubcategoryGroupKey(group.categoryId, group.subcategoryId))">
+                    <div
+                      *ngFor="let question of group.questions; trackBy: trackByQuestionId"
                       class="question-item"
                       [class.selected]="selectedQuestionId === question.qId"
                       (click)="selectQuestion(question.qId)"
                       (mouseenter)="showQuestionPreview(question, $event)"
                       (mouseleave)="hideQuestionPreview()">
-                      
+
                       <div class="question-item-content">
                         <div class="question-number">
                           {{question.qId}}
                         </div>
                         <div class="question-status">
-                          <span class="status-icon" 
+                          <span class="status-icon"
                                 [title]="getQuestionStatus(question.qId)?.status || 'PENDING'">
                             {{getStatusIcon(getQuestionStatus(question.qId)?.status || 'PENDING')}}
                           </span>
                         </div>
                       </div>
-                    </mat-list-item>
-                  </mat-list>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
