@@ -196,6 +196,23 @@
       margin-right: -8px;
       min-width: 120px;
     }
+
+    .mark-ready-btn {
+      margin-left: auto;
+      margin-top: -4px;
+      flex-shrink: 0;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+
+      mat-icon {
+        margin-right: 0;
+      }
+
+      mat-spinner {
+        display: inline-block;
+      }
+    }
   }
 }
 

@@ -191,6 +191,53 @@ export class CommentService {
     );
   }
 
+  setStatus(id: string | number, status: CommentDetail['status']): Observable<CommentDetail> {
+    const SET_STATUS_MUTATION = gql`
+      mutation SetStatus($id: Long!, $status: CommentStatus!) {
+        setStatus(id: $id, status: $status) {
+          id
+          status
+          draft {
+            created
+            updated
+            text {
+              lang
+              text
+            }
+          }
+          history {
+            created
+            updated
+            text {
+              lang
+              text
+            }
+          }
+          innerMessages {
+            created
+            message
+            ownerId
+          }
+          text {
+            created
+            updated
+            text {
+              lang
+              text
+            }
+          }
+        }
+      }
+    `;
+
+    return this.apollo.mutate<{ setStatus: CommentDetail }>({
+      mutation: SET_STATUS_MUTATION,
+      variables: { id: typeof id === 'string' ? parseInt(id, 10) : id, status }
+    }).pipe(
+      map(result => result.data!.setStatus)
+    );
+  }
+
   addInnerMessage(id: string | number, message: string): Observable<InnerMessage[]> {
     const ADD_INNER_MESSAGE_MUTATION = gql`
       mutation AddInnerMessage($id: Long!, $message: String!) {

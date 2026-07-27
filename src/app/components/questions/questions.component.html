@@ -200,11 +200,26 @@
               <span *ngIf="!selectedQuestionId">Выберите вопрос</span>
             </mat-card-title>
             <mat-card-subtitle *ngIf="selectedQuestionId">
-              Статус: {{getQuestionStatus(selectedQuestionId)?.status}} | 
-              {{getSelectedQuestion()?.ChoicesReq}} ответ(ов) | 
+              Статус: {{getQuestionStatus(selectedQuestionId)?.status}} |
+              {{getSelectedQuestion()?.ChoicesReq}} ответ(ов) |
               {{getSelectedQuestion()?.Points}} балл(ов)
             </mat-card-subtitle>
-            
+
+            <!-- Быстрая установка статуса READY -->
+            <button *ngIf="selectedQuestionId"
+                    mat-raised-button
+                    color="primary"
+                    class="mark-ready-btn"
+                    (click)="markQuestionReady(selectedQuestionId)"
+                    [disabled]="isSettingReady || getQuestionStatus(selectedQuestionId)?.status === 'READY'"
+                    matTooltip="Установить статус READY">
+              <mat-spinner *ngIf="isSettingReady" diameter="16"></mat-spinner>
+              <ng-container *ngIf="!isSettingReady">
+                <mat-icon>check_circle</mat-icon>
+                <span>READY</span>
+              </ng-container>
+            </button>
+
             <!-- Кнопка показа закона, когда он скрыт -->
             <!-- Временно скрыто -->
             <button *ngIf="false && !isZakonVisible"

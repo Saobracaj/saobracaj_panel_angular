@@ -139,6 +139,9 @@ export class QuestionsComponent implements OnInit, OnDestroy {
   newInnerMessage: string = '';
   isAddingInnerMessage: boolean = false;
   
+  // Установка статуса READY
+  isSettingReady: boolean = false;
+
   // Видимость колонки с законом
   isZakonVisible = true;
   
@@ -719,6 +722,35 @@ export class QuestionsComponent implements OnInit, OnDestroy {
     return this.questionStatusMap.get(questionId.toString());
   }
 
+  markQuestionReady(questionId: number | null): void {
+    if (!questionId || this.isSettingReady) return;
+
+    if (this.getQuestionStatus(questionId)?.status === 'READY') {
+      this.snackBar.open('Вопрос уже имеет статус READY', 'Закрыть', {
+        duration: 2000
+      });
+      return;
+    }
+
+    this.isSettingReady = true;
+    this.commentService.setStatus(questionId, 'READY').subscribe({
+      next: (comment) => {
+        this.onCommentUpdated(comment);
+        this.isSettingReady = false;
+        this.snackBar.open(`Вопрос #${questionId}: статус READY`, 'Закрыть', {
+          duration: 2000
+        });
+      },
+      error: (error) => {
+        console.error('Ошибка установки статуса READY:', error);
+        this.isSettingReady = false;
+        this.snackBar.open('Ошибка установки статуса READY', 'Закрыть', {
+          duration: 3000
+        });
+      }
+    });
+  }
+
   getSelectedQuestion(): Question | undefined {
     if (!this.selectedQuestionId) return undefined;
     return this.questions.find(q => q.qId === this.selectedQuestionId);
@@ -771,7 +803,8 @@ export class QuestionsComponent implements OnInit, OnDestroy {
   onCommentUpdated(comment: CommentDetail): void {
     console.log('Комментарий обновлен:', comment);
     // Обновляем статус вопроса в списке
-    const questionIndex = this.questionStatuses.findIndex(s => s.id === comment.id);
+    const commentId = comment.id.toString();
+    const questionIndex = this.questionStatuses.findIndex(s => s.id === commentId);
     if (questionIndex !== -1) {
       this.questionStatuses[questionIndex].status = comment.status;
       this.recomputeStatusStatistics();
