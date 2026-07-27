@@ -59,20 +59,21 @@
     <div *ngIf="!isLoading && !error" class="zakon-content">
       <!-- Список элементов закона -->
       <div class="zakon-items">
-        <div *ngFor="let item of filteredData; let i = index" 
+        <div *ngFor="let item of visibleData; let i = index; trackBy: trackByIndex"
              class="zakon-item"
              [class.title-item]="item.isTitle">
           <div class="item-content">
             <markdown [data]="getDisplayText(item)" [inline]="false"></markdown>
           </div>
-          <button mat-icon-button 
+          <button mat-icon-button
                   (click)="copyLink(item)"
                   matTooltip="Копировать ссылку на этот параграф"
                   class="copy-link-btn">
             <mat-icon>link</mat-icon>
           </button>
         </div>
+        <div #loadMoreSentinel *ngIf="visibleData.length < filteredData.length" class="load-more-sentinel"></div>
       </div>
     </div>
   </mat-card-content>
-</mat-card> 
+</mat-card>
