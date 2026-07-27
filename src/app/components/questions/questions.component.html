@@ -206,8 +206,9 @@
             </mat-card-subtitle>
             
             <!-- Кнопка показа закона, когда он скрыт -->
-            <button *ngIf="!isZakonVisible" 
-                    mat-button 
+            <!-- Временно скрыто -->
+            <button *ngIf="false && !isZakonVisible"
+                    mat-button
                     (click)="showZakon()"
                     matTooltip="Показать закон"
                     class="show-zakon-btn">
@@ -351,8 +352,9 @@
       </div>
 
       <!-- Правая панель для просмотра закона -->
-      <div class="zakon-panel" [class.hidden]="!isZakonVisible">
-        <app-zakon-viewer 
+      <!-- Временно скрыто -->
+      <div *ngIf="false" class="zakon-panel" [class.hidden]="!isZakonVisible">
+        <app-zakon-viewer
           [isVisible]="isZakonVisible"
           (visibilityChanged)="onZakonVisibilityChanged($event)">
         </app-zakon-viewer>
