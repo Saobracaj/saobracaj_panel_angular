@@ -5,6 +5,7 @@ import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MarkdownComponent } from 'ngx-markdown';
 import { Subject, debounceTime, distinctUntilChanged, takeUntil } from 'rxjs';
@@ -21,6 +22,7 @@ import { ZakonService } from '../../services/zakon.service';
     MatButtonModule,
     MatIconModule,
     MatProgressSpinnerModule,
+    MatTooltipModule,
     MarkdownComponent
   ],
   templateUrl: './markdown-editor.component.html',
@@ -34,6 +36,7 @@ export class MarkdownEditorComponent implements OnInit, OnDestroy, OnChanges {
   isLoading: boolean = false;
   isSaving: boolean = false;
   isApplying: boolean = false;
+  isSettingReady: boolean = false;
   commentDetail: CommentDetail | null = null;
   foundLinks: LinkInfo[] = [];
 
@@ -79,6 +82,7 @@ export class MarkdownEditorComponent implements OnInit, OnDestroy, OnChanges {
       this.isLoading = false;
       this.isSaving = false;
       this.isApplying = false;
+      this.isSettingReady = false;
 
       if (this.questionId) {
         this.loadComment();
@@ -242,6 +246,36 @@ export class MarkdownEditorComponent implements OnInit, OnDestroy, OnChanges {
           duration: 5000
         });
         this.isApplying = false;
+      }
+    });
+  }
+
+  markReady(): void {
+    if (!this.questionId || this.isSettingReady) return;
+
+    if (this.commentDetail?.status === 'READY') {
+      this.snackBar.open('Вопрос уже имеет статус READY', 'Закрыть', {
+        duration: 2000
+      });
+      return;
+    }
+
+    this.isSettingReady = true;
+    this.commentService.setStatus(this.questionId, 'READY').subscribe({
+      next: (updatedComment) => {
+        this.commentDetail = updatedComment;
+        this.isSettingReady = false;
+        this.commentUpdated.emit(updatedComment);
+        this.snackBar.open('Статус READY установлен', 'Закрыть', {
+          duration: 3000
+        });
+      },
+      error: (error) => {
+        console.error('Ошибка установки статуса READY:', error);
+        this.snackBar.open('Ошибка установки статуса READY', 'Закрыть', {
+          duration: 5000
+        });
+        this.isSettingReady = false;
       }
     });
   }

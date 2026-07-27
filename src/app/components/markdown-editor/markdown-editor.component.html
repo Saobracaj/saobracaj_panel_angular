@@ -19,14 +19,25 @@
     <div *ngIf="!isLoading" class="editor-container">
       <div class="editor-header">
         <div class="editor-actions">
-          <button 
-            mat-raised-button 
-            color="primary" n
+          <button
+            mat-raised-button
+            color="primary"
             (click)="applyDraft()"
             [disabled]="isApplying || !editorContent.trim()">
             <mat-icon *ngIf="!isApplying">check</mat-icon>
             <mat-spinner *ngIf="isApplying" diameter="16"></mat-spinner>
             Применить
+          </button>
+
+          <button
+            mat-raised-button
+            color="accent"
+            (click)="markReady()"
+            [disabled]="isSettingReady || commentDetail?.status === 'READY'"
+            matTooltip="Установить статус READY">
+            <mat-icon *ngIf="!isSettingReady">check_circle</mat-icon>
+            <mat-spinner *ngIf="isSettingReady" diameter="16"></mat-spinner>
+            READY
           </button>
         </div>
       </div>

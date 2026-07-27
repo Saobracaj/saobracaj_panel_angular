@@ -139,9 +139,6 @@ export class QuestionsComponent implements OnInit, OnDestroy {
   newInnerMessage: string = '';
   isAddingInnerMessage: boolean = false;
   
-  // Установка статуса READY
-  isSettingReady: boolean = false;
-
   // Видимость колонки с законом
   isZakonVisible = true;
   
@@ -720,35 +717,6 @@ export class QuestionsComponent implements OnInit, OnDestroy {
 
   getQuestionStatus(questionId: number): QuestionStatus | undefined {
     return this.questionStatusMap.get(questionId.toString());
-  }
-
-  markQuestionReady(questionId: number | null): void {
-    if (!questionId || this.isSettingReady) return;
-
-    if (this.getQuestionStatus(questionId)?.status === 'READY') {
-      this.snackBar.open('Вопрос уже имеет статус READY', 'Закрыть', {
-        duration: 2000
-      });
-      return;
-    }
-
-    this.isSettingReady = true;
-    this.commentService.setStatus(questionId, 'READY').subscribe({
-      next: (comment) => {
-        this.onCommentUpdated(comment);
-        this.isSettingReady = false;
-        this.snackBar.open(`Вопрос #${questionId}: статус READY`, 'Закрыть', {
-          duration: 2000
-        });
-      },
-      error: (error) => {
-        console.error('Ошибка установки статуса READY:', error);
-        this.isSettingReady = false;
-        this.snackBar.open('Ошибка установки статуса READY', 'Закрыть', {
-          duration: 3000
-        });
-      }
-    });
   }
 
   getSelectedQuestion(): Question | undefined {
