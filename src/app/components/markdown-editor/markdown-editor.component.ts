@@ -1,25 +1,27 @@
-import { Component, Input, Output, EventEmitter, OnInit, OnDestroy, OnChanges, SimpleChanges, ViewChild } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnInit, OnDestroy, OnChanges, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { MarkdownComponent } from 'ngx-markdown';
 import { Subject, debounceTime, distinctUntilChanged, takeUntil } from 'rxjs';
 import { CommentService, CommentDetail } from '../../services/comment.service';
 import { ZakonService } from '../../services/zakon.service';
-import { SimpleMDEDirective } from '../../directives/simplemde.directive';
 
 @Component({
   selector: 'app-markdown-editor',
   standalone: true,
   imports: [
     CommonModule,
+    FormsModule,
     MatCardModule,
     MatButtonModule,
     MatIconModule,
     MatProgressSpinnerModule,
-    SimpleMDEDirective
+    MarkdownComponent
   ],
   templateUrl: './markdown-editor.component.html',
   styleUrl: './markdown-editor.component.scss'
@@ -27,7 +29,6 @@ import { SimpleMDEDirective } from '../../directives/simplemde.directive';
 export class MarkdownEditorComponent implements OnInit, OnDestroy, OnChanges {
   @Input() questionId: string | number = '';
   @Output() commentUpdated = new EventEmitter<CommentDetail>();
-  @ViewChild(SimpleMDEDirective) simplemdeDirective!: SimpleMDEDirective;
 
   editorContent: string = '';
   isLoading: boolean = false;
@@ -35,7 +36,7 @@ export class MarkdownEditorComponent implements OnInit, OnDestroy, OnChanges {
   isApplying: boolean = false;
   commentDetail: CommentDetail | null = null;
   foundLinks: LinkInfo[] = [];
-  
+
   private contentChangeSubject = new Subject<string>();
   private destroy$ = new Subject<void>();
 
@@ -78,7 +79,7 @@ export class MarkdownEditorComponent implements OnInit, OnDestroy, OnChanges {
       this.isLoading = false;
       this.isSaving = false;
       this.isApplying = false;
-      
+
       if (this.questionId) {
         this.loadComment();
       }
@@ -94,11 +95,11 @@ export class MarkdownEditorComponent implements OnInit, OnDestroy, OnChanges {
     if (!this.questionId) return;
 
     console.log('Загружаем комментарий для вопроса:', this.questionId);
-    
+
     // Проверяем токен аутентификации
     const token = localStorage.getItem('accessToken');
     console.log('Токен аутентификации:', token ? 'доступен' : 'отсутствует');
-    
+
     this.isLoading = true;
     this.commentService.getComment(this.questionId).subscribe({
       next: (comment) => {
@@ -127,7 +128,7 @@ export class MarkdownEditorComponent implements OnInit, OnDestroy, OnChanges {
 
   private loadEditorContent(comment: CommentDetail): void {
     console.log('Загружаем содержимое редактора из комментария:', comment);
-    
+
     // Приоритет: черновик -> основной текст
     if (comment.draft?.text && comment.draft.text.length > 0) {
       // Берем первый язык из черновика
@@ -157,27 +158,27 @@ export class MarkdownEditorComponent implements OnInit, OnDestroy, OnChanges {
     const links: LinkInfo[] = [];
     const lines = content.split('\n');
     const processedUrls = new Set<string>(); // Для избежания дубликатов
-    
+
     lines.forEach((line, lineIndex) => {
       // Match markdown links: [text](url) - но исключаем изображения ![alt](url)
       const markdownLinkRegex = /(?<!!)\[([^\]]+)\]\(([^)]+)\)/g;
       let match;
-      
+
       while ((match = markdownLinkRegex.exec(line)) !== null) {
         const linkText = match[1];
         const linkUrl = match[2];
-        
+
         // Проверяем, не обрабатывали ли мы уже эту ссылку
         if (!processedUrls.has(linkUrl)) {
           processedUrls.add(linkUrl);
-          links.push({ 
-            url: linkUrl, 
+          links.push({
+            url: linkUrl,
             text: linkText,
-            line: lineIndex + 1 
+            line: lineIndex + 1
           });
         }
       }
-      
+
       // Также ищем обычные URL, но только если они не являются частью markdown ссылок
       // Используем более точный regex, который исключает URL внутри markdown ссылок
       const urlRegex = /(?<!\]\()https?:\/\/[^\s\)]+/g;
@@ -186,19 +187,19 @@ export class MarkdownEditorComponent implements OnInit, OnDestroy, OnChanges {
         urlMatches.forEach(url => {
           // Убираем возможные закрывающие скобки или другие символы
           const cleanUrl = url.replace(/[\)\]]+$/, '');
-          
+
           if (!processedUrls.has(cleanUrl)) {
             processedUrls.add(cleanUrl);
-            links.push({ 
-              url: cleanUrl, 
+            links.push({
+              url: cleanUrl,
               text: cleanUrl,
-              line: lineIndex + 1 
+              line: lineIndex + 1
             });
           }
         });
       }
     });
-    
+
     return links;
   }
 
@@ -247,7 +248,7 @@ export class MarkdownEditorComponent implements OnInit, OnDestroy, OnChanges {
 
   getStatusText(): string {
     if (!this.commentDetail) return '';
-    
+
     switch (this.commentDetail.status) {
       case 'PENDING':
         return 'Ожидает';
@@ -265,7 +266,7 @@ export class MarkdownEditorComponent implements OnInit, OnDestroy, OnChanges {
   onLinkClick(link: LinkInfo): void {
     // Проверяем, является ли ссылка ссылкой на закон
     const zakonParams = this.zakonService.parseZakonLink(link.url);
-    
+
     if (zakonParams) {
       // Это ссылка на закон - запрашиваем навигацию
       this.zakonService.navigateToLink(link.url, true);
@@ -282,7 +283,7 @@ export class MarkdownEditorComponent implements OnInit, OnDestroy, OnChanges {
       });
     }
   }
-} 
+}
 
 interface LinkInfo {
   url: string;

@@ -29,53 +29,42 @@
     
     .editor-content {
       margin-bottom: 16px;
-      
-      // Стили для SimpleMDE
-      ::ng-deep .CodeMirror {
-        border: 1px solid #e0e0e0;
-        border-radius: 4px;
-        font-family: 'Courier New', monospace;
-        font-size: 14px;
-        line-height: 1.5;
-      }
-      
-      ::ng-deep .editor-toolbar {
-        border: 1px solid #e0e0e0;
-        border-bottom: none;
-        border-radius: 4px 4px 0 0;
-        background-color: #f5f5f5;
-        
-        button {
-          color: #666;
-          
-          &:hover {
-            background-color: rgba(0, 0, 0, 0.1);
-          }
-          
-          &.active {
-            background-color: #1976d2;
-            color: white;
+      display: flex;
+      gap: 16px;
+
+      .editor-pane {
+        flex: 1;
+        min-width: 0;
+
+        .markdown-textarea {
+          width: 100%;
+          min-height: 400px;
+          box-sizing: border-box;
+          padding: 12px;
+          border: 1px solid #e0e0e0;
+          border-radius: 4px;
+          font-family: 'Courier New', monospace;
+          font-size: 14px;
+          line-height: 1.5;
+          resize: vertical;
+
+          &:focus {
+            outline: none;
+            border-color: #1976d2;
           }
         }
       }
-      
-      ::ng-deep .editor-statusbar {
-        border: 1px solid #e0e0e0;
-        border-top: none;
-        border-radius: 0 0 4px 4px;
-        background-color: #f5f5f5;
-        color: #666;
-        font-size: 12px;
-      }
-      
-      ::ng-deep .CodeMirror-fullscreen {
-        z-index: 1000;
-      }
-      
-      ::ng-deep .editor-preview {
+
+      .preview-pane {
+        flex: 1;
+        min-width: 0;
+        min-height: 400px;
+        overflow-y: auto;
         background-color: #fafafa;
         padding: 16px;
-        
+        border: 1px solid #e0e0e0;
+        border-radius: 4px;
+
         h1, h2, h3, h4, h5, h6 {
           margin-top: 24px;
           margin-bottom: 16px;

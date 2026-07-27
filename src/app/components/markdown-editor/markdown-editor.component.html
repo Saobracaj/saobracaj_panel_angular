@@ -32,25 +32,17 @@
       </div>
 
       <div class="editor-content">
-        <textarea
-          appSimpleMDE
-          [(value)]="editorContent"
-          (change)="onContentChange($event)"
-          [options]="{
-            placeholder: 'Введите Markdown текст здесь...',
-            spellChecker: false,
-            autosave: { enabled: false },
-            toolbar: [
-              'bold', 'italic', 'strikethrough', '|',
-              'heading', 'code', 'quote', '|',
-              'unordered-list', 'ordered-list', '|',
-              'link', 'image', 'table', '|',
-              'preview', 'side-by-side', 'fullscreen'
-            ],
-            status: ['lines', 'words'],
-            minHeight: '400px'
-          }">
-        </textarea>
+        <div class="editor-pane">
+          <textarea
+            class="markdown-textarea"
+            placeholder="Введите Markdown текст здесь..."
+            [(ngModel)]="editorContent"
+            (ngModelChange)="onContentChange($event)">
+          </textarea>
+        </div>
+        <div class="preview-pane">
+          <markdown [data]="editorContent"></markdown>
+        </div>
       </div>
 
       <div class="editor-info">
