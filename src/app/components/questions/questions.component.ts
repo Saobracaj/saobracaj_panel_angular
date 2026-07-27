@@ -105,6 +105,7 @@ export class QuestionsComponent implements OnInit, OnDestroy {
   questions: Question[] = [];
   russianTranslations: RussianTranslation[] = [];
   questionStatuses: QuestionStatus[] = [];
+  private questionStatusMap: Map<string, QuestionStatus> = new Map();
   categories: Category[] = [];
   subcategoryGroups: SubcategoryGroup[] = [];
   collapsedSubcategories: Set<string> = new Set();
@@ -234,10 +235,10 @@ export class QuestionsComponent implements OnInit, OnDestroy {
         this.isLoading = false;
         
         // Создаем статусы по умолчанию (PENDING) для отфильтрованных вопросов
-        this.questionStatuses = this.questions.map(q => ({
+        this.setQuestionStatuses(this.questions.map(q => ({
           id: q.qId.toString(),
           status: 'PENDING' as const
-        }));
+        })));
         
         // Теперь загружаем реальные статусы с сервера
         this.loadQuestionStatuses();
@@ -330,6 +331,11 @@ export class QuestionsComponent implements OnInit, OnDestroy {
       if (categoryCompare !== 0) return categoryCompare;
       return a.subcategoryDescription.localeCompare(b.subcategoryDescription);
     });
+  }
+
+  private setQuestionStatuses(statuses: QuestionStatus[]): void {
+    this.questionStatuses = statuses;
+    this.questionStatusMap = new Map(statuses.map(s => [s.id, s]));
   }
 
   getCategoryById(categoryId: string): Category | undefined {
@@ -449,7 +455,7 @@ export class QuestionsComponent implements OnInit, OnDestroy {
         console.log('Общее количество вопросов:', this.questions.length);
         
         // Обновляем статусы для всех вопросов
-        this.questionStatuses = this.questions.map(question => {
+        this.setQuestionStatuses(this.questions.map(question => {
           // Ищем соответствующий комментарий по ID
           // Приводим оба значения к числу для корректного сравнения
           const comment = comments.find(c => {
@@ -472,8 +478,8 @@ export class QuestionsComponent implements OnInit, OnDestroy {
             // Если статуса нет в ответе сервера, оставляем PENDING
             status: comment ? comment.status : 'PENDING'
           };
-        });
-        
+        }));
+
         this.isLoadingStatuses = false;
       },
       error: (error) => {
@@ -486,10 +492,10 @@ export class QuestionsComponent implements OnInit, OnDestroy {
           this.refreshTokenAndRetry();
         } else {
           // Если не удалось загрузить статусы, оставляем PENDING для всех
-          this.questionStatuses = this.questions.map(q => ({
+          this.setQuestionStatuses(this.questions.map(q => ({
             id: q.qId.toString(),
             status: 'PENDING' as const
-          }));
+          })));
           this.isLoadingStatuses = false;
           this.snackBar.open('Ошибка загрузки статусов', 'Закрыть', {
             duration: 5000
@@ -685,7 +691,7 @@ export class QuestionsComponent implements OnInit, OnDestroy {
   }
 
   getQuestionStatus(questionId: number): QuestionStatus | undefined {
-    return this.questionStatuses.find(status => status.id === questionId.toString());
+    return this.questionStatusMap.get(questionId.toString());
   }
 
   getSelectedQuestion(): Question | undefined {
