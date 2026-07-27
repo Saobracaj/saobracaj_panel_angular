@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, Output, EventEmitter, Input } from '@angular/core';
+import { Component, OnInit, OnDestroy, AfterViewInit, Output, EventEmitter, Input, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
@@ -39,30 +39,34 @@ import { Subject, takeUntil } from 'rxjs';
   templateUrl: './zakon-viewer.component.html',
   styleUrl: './zakon-viewer.component.scss'
 })
-export class ZakonViewerComponent implements OnInit, OnDestroy {
+export class ZakonViewerComponent implements OnInit, AfterViewInit, OnDestroy {
   zakonData: ZakonItem[] = [];
   filteredData: ZakonItem[] = [];
+  // Часть filteredData, которая реально отрисована в DOM.
+  // Рендерим весь закон (4000+ элементов с markdown) сразу — это блокирует
+  // главный поток на десятки секунд, поэтому подгружаем элементы порциями.
+  visibleData: ZakonItem[] = [];
 
   isLoading = false;
   error: string | null = null;
-  
+
   // Язык отображения
   currentLanguage: 'sr' | 'ru' = 'sr';
-  
+
   // Поле для вставки ссылки
   linkInput = '';
-  
+
   // Видимость колонки
   @Input() isVisible = true;
-  
+
   @Output() visibilityChanged = new EventEmitter<boolean>();
-  
 
-  
+  @ViewChild('loadMoreSentinel') loadMoreSentinel?: ElementRef<HTMLElement>;
 
-  
+  private readonly initialBatchSize = 80;
+  private readonly batchSize = 80;
+  private loadMoreObserver: IntersectionObserver | null = null;
 
-  
   private destroy$ = new Subject<void>();
 
   constructor(
@@ -72,7 +76,7 @@ export class ZakonViewerComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.loadZakonData();
-    
+
     // Подписываемся на запросы навигации
     this.zakonService.navigationRequest$
       .pipe(takeUntil(this.destroy$))
@@ -81,9 +85,42 @@ export class ZakonViewerComponent implements OnInit, OnDestroy {
       });
   }
 
+  ngAfterViewInit(): void {
+    this.setupLoadMoreObserver();
+  }
+
   ngOnDestroy(): void {
+    this.loadMoreObserver?.disconnect();
     this.destroy$.next();
     this.destroy$.complete();
+  }
+
+  private setupLoadMoreObserver(): void {
+    if (!this.loadMoreSentinel) {
+      return;
+    }
+    this.loadMoreObserver?.disconnect();
+    this.loadMoreObserver = new IntersectionObserver(entries => {
+      if (entries.some(e => e.isIntersecting)) {
+        this.loadMore();
+      }
+    });
+    this.loadMoreObserver.observe(this.loadMoreSentinel.nativeElement);
+  }
+
+  private resetVisibleData(): void {
+    this.visibleData = this.filteredData.slice(0, this.initialBatchSize);
+  }
+
+  loadMore(): void {
+    if (this.visibleData.length >= this.filteredData.length) {
+      return;
+    }
+    this.visibleData = this.filteredData.slice(0, this.visibleData.length + this.batchSize);
+  }
+
+  trackByIndex(index: number): number {
+    return index;
   }
 
   private loadZakonData(): void {
@@ -95,7 +132,10 @@ export class ZakonViewerComponent implements OnInit, OnDestroy {
         console.log('Компонент получил данные закона:', data.length, 'элементов');
         this.zakonData = data;
         this.filteredData = data;
+        this.resetVisibleData();
         this.isLoading = false;
+        // Сентинел появляется в DOM только после того, как исчезнет спиннер загрузки
+        setTimeout(() => this.setupLoadMoreObserver(), 0);
       },
       error: (error) => {
         console.error('Ошибка загрузки данных закона в компоненте:', error);
@@ -136,6 +176,7 @@ export class ZakonViewerComponent implements OnInit, OnDestroy {
 
   clearFilters(): void {
     this.filteredData = this.zakonData;
+    this.resetVisibleData();
   }
 
   navigateToLink(): void {
@@ -184,6 +225,11 @@ export class ZakonViewerComponent implements OnInit, OnDestroy {
   }
 
   private scrollToItem(index: number): void {
+    // Элемент может быть ещё не отрисован, если он лежит за пределами
+    // текущей подгруженной порции — досрочно подгружаем до нужного индекса.
+    if (index >= this.visibleData.length) {
+      this.visibleData = this.filteredData.slice(0, index + 1);
+    }
     setTimeout(() => {
       const items = document.querySelectorAll('.zakon-item');
       if (items[index]) {
