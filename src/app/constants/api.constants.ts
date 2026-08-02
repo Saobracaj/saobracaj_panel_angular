@@ -1,5 +1,5 @@
 export const API_CONSTANTS = {
-  SERVER_URL: 'https://saobracaj-serveer-69637270851.europe-west3.run.app',
+  SERVER_URL: 'https://api.saobracaj.gleb.at',
   GRAPHQL_ENDPOINT: '/graphql'
 } as const;
 

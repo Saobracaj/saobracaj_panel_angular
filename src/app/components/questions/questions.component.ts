@@ -16,15 +16,15 @@ import { MatInputModule } from '@angular/material/input';
 import { MatChipsModule } from '@angular/material/chips';
 import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
-import { AuthService, Comment, CommentNotification } from '../../services/auth.service';
-import { CommentService, CommentDetail, InnerMessage } from '../../services/comment.service';
+import { AuthService, Comment } from '../../services/auth.service';
+import { CommentService, CommentDetail } from '../../services/comment.service';
 import { ZakonService, ZakonNavigationRequest } from '../../services/zakon.service';
 import { MarkdownEditorComponent } from '../markdown-editor/markdown-editor.component';
 import { ZakonViewerComponent } from '../zakon-viewer/zakon-viewer.component';
 import { QuestionPreviewOverlayComponent } from '../question-preview-overlay/question-preview-overlay.component';
 import { Overlay, OverlayRef } from '@angular/cdk/overlay';
 import { ComponentPortal } from '@angular/cdk/portal';
-import { interval, Subscription, Subject } from 'rxjs';
+import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 
 interface Question {
@@ -124,25 +124,10 @@ export class QuestionsComponent implements OnInit, OnDestroy {
   statusesError: string | null = null;
   categoriesError: string | null = null;
   selectedQuestionId: number | null = null;
-  
-  // Свойства для оповещений
-  notifications: CommentNotification[] = [];
-  isLoadingNotifications: boolean = false;
-  notificationsError: string | null = null;
-  private notificationsSubscription: Subscription | null = null;
-  private notificationsTimer: Subscription | null = null;
   private destroy$ = new Subject<void>();
-  
-  // Свойства для внутренних комментариев
-  innerMessages: InnerMessage[] = [];
-  isLoadingInnerMessages: boolean = false;
-  newInnerMessage: string = '';
-  isAddingInnerMessage: boolean = false;
-  
+
   // Видимость колонки с законом
   isZakonVisible = true;
-  
-  @ViewChild('notificationsMenu') notificationsMenu!: MatMenu;
 
   constructor(
     private authService: AuthService,
@@ -160,9 +145,7 @@ export class QuestionsComponent implements OnInit, OnDestroy {
     this.loadQuestions();
     this.loadRussianTranslations();
     this.loadQuestionStatuses();
-    this.loadNotifications();
-    this.startNotificationsTimer();
-    
+
     // Подписываемся на запросы навигации по закону
     this.zakonService.navigationRequest$
       .pipe(takeUntil(this.destroy$))
@@ -182,12 +165,6 @@ export class QuestionsComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
-    if (this.notificationsSubscription) {
-      this.notificationsSubscription.unsubscribe();
-    }
-    if (this.notificationsTimer) {
-      this.notificationsTimer.unsubscribe();
-    }
     this.destroy$.next();
     this.destroy$.complete();
   }
@@ -530,152 +507,6 @@ export class QuestionsComponent implements OnInit, OnDestroy {
     });
   }
 
-  loadNotifications(): void {
-    this.isLoadingNotifications = true;
-    this.notificationsError = null;
-
-    this.notificationsSubscription = this.authService.getCommentNotifications().subscribe({
-      next: (notifications) => {
-        this.notifications = notifications;
-        this.isLoadingNotifications = false;
-      },
-      error: (error) => {
-        this.notificationsError = 'Ошибка загрузки оповещений';
-        this.isLoadingNotifications = false;
-        
-        // Если токен истек, попробуем обновить его
-        if (error.graphQLErrors?.some((e: any) => e.extensions?.code === 'token_expired')) {
-          this.refreshTokenAndRetry();
-        }
-      }
-    });
-  }
-
-  startNotificationsTimer(): void {
-    // Отписываемся от предыдущего таймера, если он существует
-    if (this.notificationsTimer) {
-      this.notificationsTimer.unsubscribe();
-    }
-    
-    // Обновляем оповещения каждые 15 секунд
-    this.notificationsTimer = interval(15000).subscribe(() => {
-      this.loadNotifications();
-    });
-  }
-
-  markNotificationsAsRead(): void {
-    if (this.notifications.length === 0) {
-      this.snackBar.open('Нет оповещений', 'Закрыть', {
-        duration: 2000
-      });
-      return;
-    }
-
-    // Находим непрочитанные оповещения
-    const unreadNotifications = this.notifications.filter(n => !n.read);
-    
-    if (unreadNotifications.length === 0) {
-      this.snackBar.open('Все оповещения прочитаны', 'Закрыть', {
-        duration: 2000
-      });
-      return;
-    }
-
-    // Берем время создания самого нового оповещения
-    const latestNotification = unreadNotifications.reduce((latest, current) => {
-      return current.created > latest.created ? current : latest;
-    });
-
-    this.authService.readNotifications(latestNotification.created.toString()).subscribe({
-      next: (updatedNotifications) => {
-        // Обновляем локальный список оповещений
-        this.notifications = updatedNotifications;
-        this.snackBar.open('Оповещения помечены как прочитанные', 'Закрыть', {
-          duration: 2000
-        });
-      },
-      error: (error) => {
-        this.snackBar.open('Ошибка при обновлении оповещений', 'Закрыть', {
-          duration: 3000
-        });
-      }
-    });
-  }
-
-  getUnreadNotificationsCount(): number {
-    return this.notifications.filter(n => !n.read).length;
-  }
-
-  markAllNotificationsAsRead(): void {
-    if (this.notifications.length === 0) {
-      this.snackBar.open('Нет оповещений для отметки', 'Закрыть', {
-        duration: 2000
-      });
-      return;
-    }
-
-    const unreadNotifications = this.notifications.filter(n => !n.read);
-    if (unreadNotifications.length === 0) {
-      this.snackBar.open('Все оповещения уже прочитаны', 'Закрыть', {
-        duration: 2000
-      });
-      return;
-    }
-
-    // Берем время создания самого нового оповещения
-    const latestNotification = unreadNotifications.reduce((latest, current) => {
-      return current.created > latest.created ? current : latest;
-    });
-
-    this.authService.readNotifications(latestNotification.created.toString()).subscribe({
-      next: (updatedNotifications) => {
-        this.notifications = updatedNotifications;
-        this.snackBar.open('Все оповещения помечены как прочитанные', 'Закрыть', {
-          duration: 2000
-        });
-      },
-      error: (error) => {
-        this.snackBar.open('Ошибка при обновлении оповещений', 'Закрыть', {
-          duration: 3000
-        });
-      }
-    });
-  }
-
-  formatNotificationTime(timestamp: number): string {
-    const date = new Date(timestamp);
-    const now = new Date();
-    const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60));
-    
-    if (diffInMinutes < 1) {
-      return 'Только что';
-    } else if (diffInMinutes < 60) {
-      return `${diffInMinutes} мин назад`;
-    } else if (diffInMinutes < 1440) {
-      const hours = Math.floor(diffInMinutes / 60);
-      return `${hours} ч назад`;
-    } else {
-      const days = Math.floor(diffInMinutes / 1440);
-      return `${days} дн назад`;
-    }
-  }
-
-  onNotificationClick(notification: CommentNotification): void {
-    // Переходим к соответствующему вопросу
-    this.selectQuestion(notification.qId);
-    
-    // Показываем уведомление о переходе
-    this.snackBar.open(`Переход к вопросу #${notification.qId}`, 'Закрыть', {
-      duration: 2000
-    });
-  }
-
-  onNotificationsMenuClosed(): void {
-    // Меню оповещений закрыто - можно добавить дополнительную логику при необходимости
-  }
-
-
-
   getStatusIcon(status: string): string {
     switch (status) {
       case 'PENDING':
@@ -711,8 +542,6 @@ export class QuestionsComponent implements OnInit, OnDestroy {
     this.selectedQuestionId = questionId;
     // Обновляем URL с ID вопроса
     this.router.navigate(['/questions', questionId], { replaceUrl: true });
-    // Загружаем внутренние комментарии для выбранного вопроса
-    this.loadInnerMessages(questionId);
   }
 
   getQuestionStatus(questionId: number): QuestionStatus | undefined {
@@ -744,7 +573,6 @@ export class QuestionsComponent implements OnInit, OnDestroy {
         // Повторяем запросы после обновления токена
         this.loadQuestions();
         this.loadQuestionStatuses();
-        this.loadNotifications();
       },
       error: (refreshError) => {
         console.error('Ошибка обновления токена:', refreshError);
@@ -780,92 +608,6 @@ export class QuestionsComponent implements OnInit, OnDestroy {
     } else {
       console.log(`Не найден вопрос с ID ${comment.id} для обновления статуса`);
     }
-  }
-
-  // Методы для работы с внутренними комментариями
-  loadInnerMessages(questionId: number): void {
-    if (!questionId) return;
-    
-    this.isLoadingInnerMessages = true;
-    this.commentService.getComment(questionId).subscribe({
-      next: (comment) => {
-        // Создаем копию массива и сортируем комментарии по времени создания (новые сначала)
-        this.innerMessages = [...(comment.innerMessages || [])].sort((a, b) => 
-          parseInt(b.created) - parseInt(a.created)
-        );
-        this.isLoadingInnerMessages = false;
-      },
-      error: (error) => {
-        console.error('Ошибка загрузки внутренних комментариев:', error);
-        this.isLoadingInnerMessages = false;
-        this.snackBar.open('Ошибка загрузки комментариев', 'Закрыть', {
-          duration: 3000
-        });
-      }
-    });
-  }
-
-  addInnerMessage(): void {
-    if (!this.selectedQuestionId || !this.newInnerMessage.trim()) return;
-    
-    this.isAddingInnerMessage = true;
-    this.commentService.addInnerMessage(this.selectedQuestionId, this.newInnerMessage.trim()).subscribe({
-      next: (messages) => {
-        // Создаем копию массива и сортируем комментарии по времени создания (новые сначала)
-        this.innerMessages = [...messages].sort((a, b) => 
-          parseInt(b.created) - parseInt(a.created)
-        );
-        this.newInnerMessage = '';
-        this.isAddingInnerMessage = false;
-        this.snackBar.open('Комментарий добавлен', 'Закрыть', {
-          duration: 2000
-        });
-      },
-      error: (error) => {
-        console.error('Ошибка добавления комментария:', error);
-        this.isAddingInnerMessage = false;
-        this.snackBar.open('Ошибка добавления комментария', 'Закрыть', {
-          duration: 3000
-        });
-      }
-    });
-  }
-
-  formatInnerMessageTime(timestamp: string): string {
-    const date = new Date(parseInt(timestamp));
-    return date.toLocaleString('ru-RU', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  }
-
-  onEnterKeyPress(event: Event): void {
-    const keyboardEvent = event as KeyboardEvent;
-    if (!keyboardEvent.shiftKey) {
-      event.preventDefault();
-      this.addInnerMessage();
-    }
-  }
-
-  // Генерируем цвет на основе ID пользователя
-  getUserColor(userId: string): string {
-    // Создаем хеш из userId для получения предсказуемого цвета
-    let hash = 0;
-    for (let i = 0; i < userId.length; i++) {
-      const char = userId.charCodeAt(i);
-      hash = ((hash << 5) - hash) + char;
-      hash = hash & hash; // Преобразуем в 32-битное целое
-    }
-    
-    // Используем хеш для генерации более контрастного цвета
-    const hue = Math.abs(hash) % 360;
-    const saturation = 70 + (Math.abs(hash) % 25); // 70-95% (более насыщенные)
-    const lightness = 45 + (Math.abs(hash) % 20); // 45-65% (средняя яркость для лучшего контраста)
-    
-    return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
   }
 
   onZakonVisibilityChanged(isVisible: boolean): void {

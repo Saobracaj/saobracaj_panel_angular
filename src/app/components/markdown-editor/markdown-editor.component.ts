@@ -134,13 +134,13 @@ export class MarkdownEditorComponent implements OnInit, OnDestroy, OnChanges {
     console.log('Загружаем содержимое редактора из комментария:', comment);
 
     // Приоритет: черновик -> основной текст
-    if (comment.draft?.text && comment.draft.text.length > 0) {
+    if (comment.draft?.items && comment.draft.items.length > 0) {
       // Берем первый язык из черновика
-      this.editorContent = comment.draft.text[0]?.text || '';
+      this.editorContent = comment.draft.items[0]?.text || '';
       console.log('Загружен черновик:', this.editorContent);
-    } else if (comment.text?.text && comment.text.text.length > 0) {
+    } else if (comment.text?.items && comment.text.items.length > 0) {
       // Берем первый язык из основного текста
-      this.editorContent = comment.text.text[0]?.text || '';
+      this.editorContent = comment.text.items[0]?.text || '';
       console.log('Загружен основной текст:', this.editorContent);
     } else {
       this.editorContent = '';

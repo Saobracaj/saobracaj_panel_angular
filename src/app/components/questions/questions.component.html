@@ -2,58 +2,7 @@
   <mat-toolbar color="primary" class="toolbar-container">
     <span>Список вопросов</span>
     <span class="spacer"></span>
-    
-    <!-- Иконка оповещений с меню -->
-    <button mat-icon-button 
-            [matMenuTriggerFor]="notificationsMenu"
-            [matBadge]="getUnreadNotificationsCount() > 0 ? getUnreadNotificationsCount().toString() : null"
-            matBadgeColor="warn"
-            matTooltip="Оповещения"
-            [disabled]="isLoadingNotifications">
-      <mat-icon *ngIf="!isLoadingNotifications">notifications</mat-icon>
-      <mat-spinner *ngIf="isLoadingNotifications" diameter="20"></mat-spinner>
-    </button>
 
-    <mat-menu #notificationsMenu="matMenu" class="notifications-menu" (closed)="onNotificationsMenuClosed()">
-      <div class="notifications-header">
-        <h3 mat-menu-item>Оповещения</h3>
-        <button mat-button 
-                *ngIf="getUnreadNotificationsCount() > 0"
-                (click)="markAllNotificationsAsRead()"
-                class="mark-all-read-btn">
-          Отметить все как прочитанные
-        </button>
-      </div>
-      
-      <mat-divider></mat-divider>
-      
-      <div class="notifications-list">
-        <div *ngIf="notifications.length === 0" class="no-notifications">
-          <mat-icon>notifications_none</mat-icon>
-          <p>Нет оповещений</p>
-        </div>
-        
-        <div *ngFor="let notification of notifications" 
-             class="notification-item"
-             [class.unread]="!notification.read"
-             (click)="onNotificationClick(notification)">
-          <div class="notification-content">
-            <div class="notification-message">{{notification.message}}</div>
-            <div class="notification-meta">
-              <span class="notification-time">{{formatNotificationTime(notification.created)}}</span>
-              <span class="notification-question">
-                <mat-icon class="question-icon">open_in_new</mat-icon>
-                Вопрос #{{notification.qId}}
-              </span>
-            </div>
-          </div>
-          <div class="notification-status">
-            <mat-icon *ngIf="!notification.read" class="unread-indicator">fiber_manual_record</mat-icon>
-          </div>
-        </div>
-      </div>
-    </mat-menu>
-    
     <button mat-icon-button (click)="logout()" matTooltip="Выйти">
       <mat-icon>logout</mat-icon>
     </button>
@@ -282,69 +231,10 @@
               </div>
 
               <!-- Markdown редактор -->
-              <app-markdown-editor 
+              <app-markdown-editor
                 [questionId]="selectedQuestionId || ''"
                 (commentUpdated)="onCommentUpdated($event)">
               </app-markdown-editor>
-
-              <!-- Внутренние комментарии -->
-              <div class="inner-messages-section">
-                <h3>Внутренние комментарии ({{innerMessages.length}})</h3>
-                
-                <!-- Поле для добавления нового комментария -->
-                <div class="add-comment-form">
-                  <mat-form-field appearance="outline" class="full-width">
-                    <mat-label>Добавить комментарий</mat-label>
-                    <textarea 
-                      matInput 
-                      [(ngModel)]="newInnerMessage" 
-                      placeholder="Введите комментарий..."
-                      rows="3"
-                      [disabled]="isAddingInnerMessage"
-                      (keydown.enter)="onEnterKeyPress($event)">
-                    </textarea>
-                  </mat-form-field>
-                  
-                  <div class="add-comment-actions">
-                    <button 
-                      mat-raised-button 
-                      color="primary" 
-                      (click)="addInnerMessage()"
-                      [disabled]="!newInnerMessage.trim() || isAddingInnerMessage">
-                      <mat-spinner *ngIf="isAddingInnerMessage" diameter="16"></mat-spinner>
-                      <span *ngIf="!isAddingInnerMessage">Добавить</span>
-                    </button>
-                  </div>
-                </div>
-
-                <!-- Список комментариев -->
-                <div class="inner-messages-list">
-                  <div *ngIf="isLoadingInnerMessages" class="loading-messages">
-                    <mat-spinner diameter="30"></mat-spinner>
-                    <p>Загрузка комментариев...</p>
-                  </div>
-
-                  <div *ngIf="!isLoadingInnerMessages && innerMessages.length === 0" class="no-messages">
-                    <mat-icon>chat_bubble_outline</mat-icon>
-                    <p>Нет комментариев</p>
-                  </div>
-
-                  <div *ngIf="!isLoadingInnerMessages && innerMessages.length > 0" class="messages-container">
-                    <div *ngFor="let message of innerMessages" class="message-item" 
-                         [style.border-left-color]="getUserColor(message.ownerId)">
-                      <div class="message-header">
-                        <span class="message-owner" [style.color]="getUserColor(message.ownerId)">
-                          {{message.ownerId}}
-                        </span>
-                        <span class="message-time">{{formatInnerMessageTime(message.created)}}</span>
-                      </div>
-                      <div class="message-content">
-                        {{message.message}}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
             </div>
           </mat-card-content>
         </mat-card>
