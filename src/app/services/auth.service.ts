@@ -13,14 +13,6 @@ export interface Comment {
   status: 'PENDING' | 'DRAFT' | 'MODERATION' | 'READY';
 }
 
-export interface CommentNotification {
-  id: string;
-  created: number;
-  message: string;
-  qId: number;
-  read: boolean;
-}
-
 @Injectable({
   providedIn: 'root'
 })
@@ -37,7 +29,7 @@ export class AuthService {
     if (typeof window !== 'undefined' && window.localStorage) {
       const accessToken = localStorage.getItem('accessToken');
       const refreshToken = localStorage.getItem('refreshToken');
-      
+
       if (accessToken && refreshToken) {
         this.isAuthenticatedSubject.next(true);
       }
@@ -46,20 +38,20 @@ export class AuthService {
 
   login(email: string, password: string): Observable<AuthTokens> {
     const LOGIN_MUTATION = gql`
-      query Auth($email: String!, $password: String!) {
-        auth(email: $email, password: $password) {
+      mutation Login($email: String!, $password: String!) {
+        login(email: $email, password: $password) {
           accessToken
           refreshToken
         }
       }
     `;
 
-    return this.apollo.query<{ auth: AuthTokens }>({
-      query: LOGIN_MUTATION,
+    return this.apollo.mutate<{ login: AuthTokens }>({
+      mutation: LOGIN_MUTATION,
       variables: { email, password }
     }).pipe(
       map(result => {
-        const tokens = result.data.auth;
+        const tokens = result.data!.login;
         this.saveTokens(tokens);
         this.isAuthenticatedSubject.next(true);
         return tokens;
@@ -69,13 +61,13 @@ export class AuthService {
 
   refreshToken(): Observable<AuthTokens> {
     const refreshToken = this.getRefreshToken();
-    
+
     if (!refreshToken) {
       throw new Error('No refresh token available');
     }
 
     const REFRESH_MUTATION = gql`
-      query RefreshToken($refreshToken: String!) {
+      mutation RefreshToken($refreshToken: String!) {
         refreshToken(refreshToken: $refreshToken) {
           accessToken
           refreshToken
@@ -83,12 +75,12 @@ export class AuthService {
       }
     `;
 
-    return this.apollo.query<{ refreshToken: AuthTokens }>({
-      query: REFRESH_MUTATION,
+    return this.apollo.mutate<{ refreshToken: AuthTokens }>({
+      mutation: REFRESH_MUTATION,
       variables: { refreshToken }
     }).pipe(
       map(result => {
-        const tokens = result.data.refreshToken;
+        const tokens = result.data!.refreshToken;
         this.saveTokens(tokens);
         return tokens;
       })
@@ -97,69 +89,22 @@ export class AuthService {
 
   getComments(): Observable<Comment[]> {
     const COMMENTS_QUERY = gql`
-      query Comments {
-        comments {
+      query QuestionComments {
+        questionComments {
           id
           status
         }
       }
     `;
 
-    return this.apollo.query<{ comments: Comment[] }>({
+    return this.apollo.query<{ questionComments: Comment[] }>({
       query: COMMENTS_QUERY,
       fetchPolicy: 'network-only' // Принудительно загружаем с сервера
     }).pipe(
       map(result => {
-        console.log('AuthService: Получено комментариев:', result.data.comments.length);
-        if (result.data.comments.length > 0) {
-          console.log('AuthService: Первые 3 комментария:', result.data.comments.slice(0, 3));
-        } else {
-          console.log('AuthService: Комментарии не найдены - возможно, они еще не созданы');
-        }
-        return result.data.comments;
+        console.log('AuthService: Получено комментариев:', result.data.questionComments.length);
+        return result.data.questionComments;
       })
-    );
-  }
-
-  getCommentNotifications(): Observable<CommentNotification[]> {
-    const NOTIFICATIONS_QUERY = gql`
-      query CommentNotifications {
-        commentNotifications {
-          created
-          id
-          message
-          qId
-          read
-        }
-      }
-    `;
-
-    return this.apollo.query<{ commentNotifications: CommentNotification[] }>({
-      query: NOTIFICATIONS_QUERY,
-      fetchPolicy: 'network-only' // Принудительно загружаем с сервера
-    }).pipe(
-      map(result => result.data.commentNotifications)
-    );
-  }
-
-  readNotifications(lastReadTime: string): Observable<CommentNotification[]> {
-    const READ_NOTIFICATIONS_MUTATION = gql`
-      mutation ReadNotifications($lastReadTime: Long!) {
-        readNotifications(lastReadTime: $lastReadTime) {
-          created
-          id
-          message
-          qId
-          read
-        }
-      }
-    `;
-
-    return this.apollo.mutate<{ readNotifications: CommentNotification[] }>({
-      mutation: READ_NOTIFICATIONS_MUTATION,
-      variables: { lastReadTime: parseInt(lastReadTime) }
-    }).pipe(
-      map(result => result.data!.readNotifications)
     );
   }
 
@@ -191,4 +136,4 @@ export class AuthService {
     }
     return null;
   }
-} 
+}
