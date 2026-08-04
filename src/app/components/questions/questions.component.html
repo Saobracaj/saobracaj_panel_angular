@@ -183,7 +183,7 @@
 
                 <!-- Изображение вопроса -->
                 <div *ngIf="getSelectedQuestion()?.HasImage" class="question-image">
-                  <img [src]="'https://saobracaj.gleb.at/img/' + selectedQuestionId + '.jpeg'" 
+                  <img [src]="'https://saobracaj.github.io/assets/img/' + selectedQuestionId + '.jpeg'"
                        [alt]="'Изображение для вопроса ' + selectedQuestionId"
                        class="question-img"
                        (error)="onImageError($event)"

@@ -89,21 +89,21 @@ export class AuthService {
 
   getComments(): Observable<Comment[]> {
     const COMMENTS_QUERY = gql`
-      query QuestionComments {
-        questionComments {
+      query AllQuestionComments {
+        allQuestionComments {
           id
           status
         }
       }
     `;
 
-    return this.apollo.query<{ questionComments: Comment[] }>({
+    return this.apollo.query<{ allQuestionComments: Comment[] }>({
       query: COMMENTS_QUERY,
       fetchPolicy: 'network-only' // Принудительно загружаем с сервера
     }).pipe(
       map(result => {
-        console.log('AuthService: Получено комментариев:', result.data.questionComments.length);
-        return result.data.questionComments;
+        console.log('AuthService: Получено комментариев:', result.data.allQuestionComments.length);
+        return result.data.allQuestionComments;
       })
     );
   }

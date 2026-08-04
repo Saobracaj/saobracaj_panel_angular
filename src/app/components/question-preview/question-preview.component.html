@@ -24,7 +24,7 @@
 
       <!-- Изображение вопроса -->
       <div *ngIf="question.HasImage" class="question-image">
-        <img [src]="'https://saobracaj.gleb.at/img/' + question.qId + '.jpeg'" 
+        <img [src]="'https://saobracaj.github.io/assets/img/' + question.qId + '.jpeg'"
              [alt]="'Изображение для вопроса ' + question.qId"
              class="preview-img"
              (error)="onImageError($event)"
