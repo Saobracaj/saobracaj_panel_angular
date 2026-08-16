@@ -1,0 +1,278 @@
+<mat-toolbar color="primary" class="billing-toolbar">
+  <button mat-icon-button (click)="backToQuestions()" matTooltip="К вопросам">
+    <mat-icon>arrow_back</mat-icon>
+  </button>
+  <span>Платежи и подписки</span>
+  <span class="spacer"></span>
+  <button mat-icon-button (click)="logout()" matTooltip="Выйти">
+    <mat-icon>logout</mat-icon>
+  </button>
+</mat-toolbar>
+
+<mat-tab-group (selectedIndexChange)="onTabChange($event)">
+  <!-- ------------------------------------------------------------ Заказы -->
+  <mat-tab label="Заказы">
+    <div class="tab-body">
+      <div class="filters">
+        <mat-form-field appearance="outline">
+          <mat-label>Статус</mat-label>
+          <mat-select [(ngModel)]="statusFilter" (selectionChange)="applyFilters()">
+            <mat-option *ngFor="let s of statuses" [value]="s.value">{{ s.label }}</mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="search">
+          <mat-label>Позив на број или email</mat-label>
+          <input
+            matInput
+            [(ngModel)]="search"
+            (keyup.enter)="applyFilters()"
+            placeholder="82-00001234 или user@example.com"
+          />
+        </mat-form-field>
+
+        <button mat-flat-button color="primary" (click)="applyFilters()">Найти</button>
+      </div>
+
+      <mat-spinner *ngIf="loadingOrders" diameter="36"></mat-spinner>
+
+      <table class="grid" *ngIf="!loadingOrders && orders.length">
+        <thead>
+          <tr>
+            <th>Создан</th>
+            <th>Пользователь</th>
+            <th>Тариф</th>
+            <th>Сумма</th>
+            <th>Позив на број</th>
+            <th>Статус</th>
+            <th>Действия</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let o of orders" [class.pending]="o.status === 'PENDING'">
+            <td>{{ o.createdAt | date: 'dd.MM.yyyy HH:mm' }}</td>
+            <td>{{ o.userEmail || o.userId }}</td>
+            <td>{{ o.sku }} — {{ kindLabel(o.tariffKind) }}, {{ o.months }} мес.</td>
+            <td class="amount">{{ o.amountRsd }} RSD</td>
+            <td class="reference">{{ o.referenceDisplay }}</td>
+            <td>
+              {{ statusLabel(o.status) }}
+              <div class="hint" *ngIf="o.status === 'PENDING'">
+                до {{ o.paymentDueAt | date: 'dd.MM.yyyy' }}
+              </div>
+            </td>
+            <td class="actions">
+              <ng-container *ngIf="o.status === 'PENDING'">
+                <button mat-flat-button color="primary" (click)="confirm(o)">Оплачен</button>
+                <button mat-stroked-button (click)="cancel(o)">Отменить</button>
+              </ng-container>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <p class="empty" *ngIf="!loadingOrders && !orders.length">Заказов не найдено.</p>
+
+      <div class="pager" *ngIf="ordersTotal > pageSize">
+        <button mat-stroked-button (click)="prevPage()" [disabled]="offset === 0">Назад</button>
+        <span>{{ offset + 1 }}–{{ offset + orders.length }} из {{ ordersTotal }}</span>
+        <button
+          mat-stroked-button
+          (click)="nextPage()"
+          [disabled]="offset + pageSize >= ordersTotal"
+        >
+          Вперёд
+        </button>
+      </div>
+    </div>
+  </mat-tab>
+
+  <!-- ------------------------------------------------------- Пользователь -->
+  <mat-tab label="Пользователь">
+    <div class="tab-body">
+      <div class="filters">
+        <mat-form-field appearance="outline" class="search">
+          <mat-label>Email пользователя</mat-label>
+          <input matInput [(ngModel)]="userEmail" (keyup.enter)="findUser()" />
+        </mat-form-field>
+        <button mat-flat-button color="primary" (click)="findUser()">Открыть карточку</button>
+      </div>
+
+      <mat-spinner *ngIf="loadingUser" diameter="36"></mat-spinner>
+      <p class="empty" *ngIf="userNotFound">Пользователь с таким email не найден.</p>
+
+      <ng-container *ngIf="user as u">
+        <mat-card class="card">
+          <mat-card-title>{{ u.email }}</mat-card-title>
+          <mat-card-content>
+            <p *ngIf="u.subscription.active; else noSub">
+              Подписка активна: <b>{{ kindLabel(u.subscription.tariffKind) }}</b
+              >, до {{ u.subscription.endsAt | date: 'dd.MM.yyyy' }} (осталось
+              {{ u.subscription.daysLeft }} дн.)
+            </p>
+            <ng-template #noSub><p>Активной подписки нет.</p></ng-template>
+            <p class="hint">Фича-флаги: {{ u.subscription.featureKeys.join(', ') || '—' }}</p>
+          </mat-card-content>
+        </mat-card>
+
+        <mat-card class="card">
+          <mat-card-title>Выдать / изменить подписку вручную</mat-card-title>
+          <mat-card-content class="grant-form">
+            <mat-form-field appearance="outline">
+              <mat-label>Тариф</mat-label>
+              <mat-select [(ngModel)]="grantKind">
+                <mat-option value="BASIC">базовый</mat-option>
+                <mat-option value="RUSSIAN">с русским контентом</mat-option>
+              </mat-select>
+            </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>Месяцев</mat-label>
+              <input matInput type="number" min="1" max="120" [(ngModel)]="grantMonths" />
+            </mat-form-field>
+            <mat-form-field appearance="outline" class="search">
+              <mat-label>Комментарий (попадёт в журнал)</mat-label>
+              <input matInput [(ngModel)]="grantNote" />
+            </mat-form-field>
+            <div class="grant-actions">
+              <button mat-flat-button color="primary" (click)="grant()">Выдать</button>
+              <button mat-stroked-button (click)="extend()">Продлить</button>
+              <button mat-stroked-button color="warn" (click)="revoke()">Отозвать</button>
+            </div>
+            <p class="hint">
+              «Выдать» ставит выбранный набор флагов (апгрейд базовый → с русским делается им же),
+              «Продлить» добавляет месяцы к текущему набору.
+            </p>
+          </mat-card-content>
+        </mat-card>
+
+        <mat-card class="card">
+          <mat-card-title>Периоды подписки</mat-card-title>
+          <mat-card-content>
+            <table class="grid" *ngIf="u.periods.length; else noPeriods">
+              <thead>
+                <tr>
+                  <th>С</th>
+                  <th>По</th>
+                  <th>Тариф</th>
+                  <th>Источник</th>
+                  <th>Комментарий</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let p of u.periods" [class.revoked]="p.revokedAt">
+                  <td>{{ p.startsAt | date: 'dd.MM.yyyy' }}</td>
+                  <td>{{ p.endsAt | date: 'dd.MM.yyyy' }}</td>
+                  <td>{{ kindLabel(p.tariffKind) }}</td>
+                  <td>{{ p.source === 'ORDER' ? 'заказ' : 'вручную' }}</td>
+                  <td>{{ p.revokedAt ? 'отозван; ' : '' }}{{ p.note }}</td>
+                </tr>
+              </tbody>
+            </table>
+            <ng-template #noPeriods><p class="empty">Периодов нет.</p></ng-template>
+          </mat-card-content>
+        </mat-card>
+
+        <mat-card class="card">
+          <mat-card-title>История заказов</mat-card-title>
+          <mat-card-content>
+            <table class="grid" *ngIf="u.orders.length; else noOrders">
+              <thead>
+                <tr>
+                  <th>Создан</th>
+                  <th>Тариф</th>
+                  <th>Сумма</th>
+                  <th>Позив на број</th>
+                  <th>Статус</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let o of u.orders">
+                  <td>{{ o.createdAt | date: 'dd.MM.yyyy HH:mm' }}</td>
+                  <td>{{ o.sku }}</td>
+                  <td class="amount">{{ o.amountRsd }} RSD</td>
+                  <td class="reference">{{ o.referenceDisplay }}</td>
+                  <td>{{ statusLabel(o.status) }}</td>
+                  <td class="actions">
+                    <button
+                      mat-flat-button
+                      color="primary"
+                      *ngIf="o.status === 'PENDING'"
+                      (click)="confirm(o)"
+                    >
+                      Оплачен
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+            <ng-template #noOrders><p class="empty">Заказов нет.</p></ng-template>
+          </mat-card-content>
+        </mat-card>
+      </ng-container>
+    </div>
+  </mat-tab>
+
+  <!-- ------------------------------------------------------------ Журнал -->
+  <mat-tab label="Журнал">
+    <div class="tab-body">
+      <p class="hint">Операции с деньгами: кто, что и когда сделал.</p>
+      <table class="grid" *ngIf="audit.length">
+        <thead>
+          <tr>
+            <th>Когда</th>
+            <th>Кто</th>
+            <th>Действие</th>
+            <th>Подробности</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let a of audit">
+            <td>{{ a.createdAt | date: 'dd.MM.yyyy HH:mm' }}</td>
+            <td>{{ a.actorEmail || 'система' }}</td>
+            <td>{{ a.action }}</td>
+            <td class="details">{{ a.details }}</td>
+          </tr>
+        </tbody>
+      </table>
+      <p class="empty" *ngIf="!audit.length">Журнал пуст.</p>
+    </div>
+  </mat-tab>
+
+  <!-- ------------------------------------------------------------ Тарифы -->
+  <mat-tab label="Тарифы">
+    <div class="tab-body">
+      <p class="hint">Цены хранятся в базе — их можно менять без релиза приложения.</p>
+      <table class="grid" *ngIf="tariffs.length">
+        <thead>
+          <tr>
+            <th>SKU</th>
+            <th>Тариф</th>
+            <th>Срок</th>
+            <th>Цена, RSD</th>
+            <th>В витрине</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let t of tariffs">
+            <td>{{ t.sku }}</td>
+            <td>{{ kindLabel(t.kind) }}</td>
+            <td>{{ t.months }} мес.</td>
+            <td>
+              <input
+                class="price"
+                type="number"
+                [value]="t.priceRsd"
+                (blur)="savePrice(t, $any($event.target).value)"
+              />
+            </td>
+            <td>
+              <mat-checkbox [checked]="t.active" (change)="toggleActive(t)"></mat-checkbox>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <p class="empty" *ngIf="!tariffs.length">Тарифы не загружены.</p>
+    </div>
+  </mat-tab>
+</mat-tab-group>
