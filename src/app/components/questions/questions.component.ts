@@ -209,8 +209,10 @@ export class QuestionsComponent implements OnInit, OnDestroy {
         return response.json();
       })
       .then((questions: Question[]) => {
-        // Фильтруем вопросы, исключая категорию 38
-        this.questions = questions.filter(q => q.categoryId !== '38');
+        // Банк содержит только то, что вытягивает экзамен категории B:
+        // категория 38 («последице непоштовања прописа») из него удалена,
+        // так что фильтровать больше нечего.
+        this.questions = questions;
         this.questionIdSet = new Set(this.questions.map(q => q.qId.toString()));
 
         // Загружаем русские переводы
