@@ -584,6 +584,11 @@ export class QuestionsComponent implements OnInit, OnDestroy {
     });
   }
 
+  /** Денежный стол: входящие заказы и ручное подтверждение оплаты. */
+  openBilling(): void {
+    this.router.navigate(['/billing']);
+  }
+
   logout(): void {
     this.authService.logout();
     this.router.navigate(['/login']);
