@@ -3,30 +3,32 @@ import { Apollo, gql } from 'apollo-angular';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 
-// Статусы заказа — ровно те, что отдаёт бэкенд (`OrderStatus`).
-export type OrderStatus = 'PENDING' | 'PAID' | 'CANCELLED' | 'EXPIRED';
+// Магазин, через который прошла оплата (`StorePlatform` бэкенда).
+export type StorePlatform = 'APPLE' | 'GOOGLE';
+// Состояние покупки по данным магазина (`StorePurchaseStatus`).
+export type StorePurchaseStatus = 'ACTIVE' | 'EXPIRED' | 'REFUNDED';
 // Семейство тарифа: базовый или с русским контентом.
 export type TariffKind = 'BASIC' | 'RUSSIAN';
 
-export interface Order {
+export interface StorePurchase {
   id: string;
   userId: string;
   userEmail?: string | null;
+  platform: StorePlatform;
   sku: string;
   tariffKind: TariffKind;
   months: number;
-  amountRsd: number;
-  status: OrderStatus;
-  reference: string;
-  referenceDisplay: string;
-  createdAt: string;
-  paymentDueAt: string;
-  paidAt?: string | null;
-  cancelledAt?: string | null;
+  productId: string;
+  transactionId: string;
+  subscriptionId?: string | null;
+  autoRenewing: boolean;
+  status: StorePurchaseStatus;
+  purchasedAt: string;
+  expiresAt?: string | null;
 }
 
-export interface OrdersPage {
-  items: Order[];
+export interface StorePurchasesPage {
+  items: StorePurchase[];
   total: number;
 }
 
@@ -36,6 +38,9 @@ export interface SubscriptionStatus {
   featureKeys: string[];
   endsAt?: string | null;
   daysLeft?: number | null;
+  autoRenewing: boolean;
+  manageUrl?: string | null;
+  platform?: StorePlatform | null;
   remindersEnabled: boolean;
 }
 
@@ -45,8 +50,9 @@ export interface SubscriptionPeriod {
   tariffKind?: TariffKind | null;
   startsAt: string;
   endsAt: string;
-  source: 'ORDER' | 'MANUAL';
-  orderId?: string | null;
+  source: 'STORE' | 'MANUAL' | 'ORDER';
+  purchaseId?: string | null;
+  autoRenewing: boolean;
   note?: string | null;
   revokedAt?: string | null;
   createdAt: string;
@@ -57,7 +63,7 @@ export interface BillingUser {
   email: string;
   subscription: SubscriptionStatus;
   periods: SubscriptionPeriod[];
-  orders: Order[];
+  purchases: StorePurchase[];
 }
 
 export interface AuditEntry {
@@ -65,7 +71,7 @@ export interface AuditEntry {
   actorEmail?: string | null;
   action: string;
   userId?: string | null;
-  orderId?: string | null;
+  purchaseId?: string | null;
   details?: string | null;
   createdAt: string;
 }
@@ -76,25 +82,28 @@ export interface Tariff {
   months: number;
   priceRsd: number;
   featureKeys: string[];
+  appleProductId: string;
+  googleProductId: string;
+  autoRenewing: boolean;
   active: boolean;
   sortOrder: number;
 }
 
-const ORDER_FIELDS = `
+const PURCHASE_FIELDS = `
   id
   userId
   userEmail
+  platform
   sku
   tariffKind
   months
-  amountRsd
+  productId
+  transactionId
+  subscriptionId
+  autoRenewing
   status
-  reference
-  referenceDisplay
-  createdAt
-  paymentDueAt
-  paidAt
-  cancelledAt
+  purchasedAt
+  expiresAt
 `;
 
 const SUBSCRIPTION_FIELDS = `
@@ -103,6 +112,9 @@ const SUBSCRIPTION_FIELDS = `
   featureKeys
   endsAt
   daysLeft
+  autoRenewing
+  manageUrl
+  platform
   remindersEnabled
 `;
 
@@ -113,42 +125,51 @@ const PERIOD_FIELDS = `
   startsAt
   endsAt
   source
-  orderId
+  purchaseId
+  autoRenewing
   note
   revokedAt
   createdAt
 `;
 
+const TARIFF_FIELDS = `
+  sku kind months priceRsd featureKeys appleProductId googleProductId
+  autoRenewing active sortOrder
+`;
+
 /**
- * Денежный стол: заказы, ручное подтверждение оплаты и операции с подпиской.
- * Всё под правом `manage_billing` на сервере — панель просто показывает ошибку,
- * если у оператора его нет.
+ * Денежный стол: покупки в сторах и операции с подпиской.
+ *
+ * Деньги берут App Store и Google Play, поэтому подтверждать оплату здесь
+ * нечего: право появляется само по проверенному чеку. Оператору остались
+ * наблюдение (покупки, журнал), ручная выдача подписки и правка каталога —
+ * всё под правом `manage_billing` на сервере.
  */
 @Injectable({ providedIn: 'root' })
 export class BillingService {
   constructor(private apollo: Apollo) {}
 
-  orders(
-    status: OrderStatus | null,
+  purchases(
+    platform: StorePlatform | null,
     search: string | null,
     limit: number,
     offset: number
-  ): Observable<OrdersPage> {
+  ): Observable<StorePurchasesPage> {
     const QUERY = gql`
-      query BillingOrders($status: OrderStatus, $search: String, $limit: Int!, $offset: Int!) {
-        billingOrders(status: $status, search: $search, limit: $limit, offset: $offset) {
-          items { ${ORDER_FIELDS} }
+      query BillingPurchases($platform: StorePlatform, $search: String, $limit: Int!, $offset: Int!) {
+        billingPurchases(platform: $platform, search: $search, limit: $limit, offset: $offset) {
+          items { ${PURCHASE_FIELDS} }
           total
         }
       }
     `;
     return this.apollo
-      .query<{ billingOrders: OrdersPage }>({
+      .query<{ billingPurchases: StorePurchasesPage }>({
         query: QUERY,
-        variables: { status, search: search || null, limit, offset },
+        variables: { platform, search: search || null, limit, offset },
         fetchPolicy: 'network-only',
       })
-      .pipe(map((r) => r.data.billingOrders));
+      .pipe(map((r) => r.data.billingPurchases));
   }
 
   user(email: string): Observable<BillingUser | null> {
@@ -159,7 +180,7 @@ export class BillingService {
           email
           subscription { ${SUBSCRIPTION_FIELDS} }
           periods { ${PERIOD_FIELDS} }
-          orders { ${ORDER_FIELDS} }
+          purchases { ${PURCHASE_FIELDS} }
         }
       }
     `;
@@ -180,7 +201,7 @@ export class BillingService {
           actorEmail
           action
           userId
-          orderId
+          purchaseId
           details
           createdAt
         }
@@ -198,37 +219,12 @@ export class BillingService {
   tariffs(): Observable<Tariff[]> {
     const QUERY = gql`
       query AllTariffs {
-        allTariffs { sku kind months priceRsd featureKeys active sortOrder }
+        allTariffs { ${TARIFF_FIELDS} }
       }
     `;
     return this.apollo
       .query<{ allTariffs: Tariff[] }>({ query: QUERY, fetchPolicy: 'network-only' })
       .pipe(map((r) => r.data.allTariffs));
-  }
-
-  confirmOrder(id: string): Observable<Order> {
-    const MUTATION = gql`
-      mutation ConfirmOrder($id: ID!) {
-        confirmOrder(id: $id) { ${ORDER_FIELDS} }
-      }
-    `;
-    return this.apollo
-      .mutate<{ confirmOrder: Order }>({ mutation: MUTATION, variables: { id } })
-      .pipe(map((r) => r.data!.confirmOrder));
-  }
-
-  cancelOrder(id: string, reason: string | null): Observable<Order> {
-    const MUTATION = gql`
-      mutation CancelOrder($id: ID!, $reason: String) {
-        cancelOrder(id: $id, reason: $reason) { ${ORDER_FIELDS} }
-      }
-    `;
-    return this.apollo
-      .mutate<{ cancelOrder: Order }>({
-        mutation: MUTATION,
-        variables: { id, reason: reason || null },
-      })
-      .pipe(map((r) => r.data!.cancelOrder));
   }
 
   grantSubscription(
@@ -290,7 +286,7 @@ export class BillingService {
     const MUTATION = gql`
       mutation UpdateTariff($sku: String!, $priceRsd: Int, $active: Boolean) {
         updateTariff(sku: $sku, priceRsd: $priceRsd, active: $active) {
-          sku kind months priceRsd featureKeys active sortOrder
+          ${TARIFF_FIELDS}
         }
       }
     `;

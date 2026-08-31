@@ -39,10 +39,6 @@
     white-space: nowrap;
   }
 
-  tr.pending {
-    background: rgba(255, 193, 7, 0.08);
-  }
-
   tr.revoked {
     opacity: 0.5;
     text-decoration: line-through;

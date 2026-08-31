@@ -10,76 +10,72 @@
 </mat-toolbar>
 
 <mat-tab-group (selectedIndexChange)="onTabChange($event)">
-  <!-- ------------------------------------------------------------ Заказы -->
-  <mat-tab label="Заказы">
+  <!-- ----------------------------------------------------------- Покупки -->
+  <mat-tab label="Покупки">
     <div class="tab-body">
       <div class="filters">
         <mat-form-field appearance="outline">
-          <mat-label>Статус</mat-label>
-          <mat-select [(ngModel)]="statusFilter" (selectionChange)="applyFilters()">
-            <mat-option *ngFor="let s of statuses" [value]="s.value">{{ s.label }}</mat-option>
+          <mat-label>Стор</mat-label>
+          <mat-select [(ngModel)]="platformFilter" (selectionChange)="applyFilters()">
+            <mat-option *ngFor="let p of platforms" [value]="p.value">{{ p.label }}</mat-option>
           </mat-select>
         </mat-form-field>
 
         <mat-form-field appearance="outline" class="search">
-          <mat-label>Позив на број или email</mat-label>
+          <mat-label>Email, платёж или товар</mat-label>
           <input
             matInput
             [(ngModel)]="search"
             (keyup.enter)="applyFilters()"
-            placeholder="82-00001234 или user@example.com"
+            placeholder="user@example.com или GPA.3311-1111-2222-33333"
           />
         </mat-form-field>
 
         <button mat-flat-button color="primary" (click)="applyFilters()">Найти</button>
       </div>
 
-      <mat-spinner *ngIf="loadingOrders" diameter="36"></mat-spinner>
+      <mat-spinner *ngIf="loadingPurchases" diameter="36"></mat-spinner>
 
-      <table class="grid" *ngIf="!loadingOrders && orders.length">
+      <table class="grid" *ngIf="!loadingPurchases && purchases.length">
         <thead>
           <tr>
-            <th>Создан</th>
+            <th>Куплено</th>
             <th>Пользователь</th>
             <th>Тариф</th>
-            <th>Сумма</th>
-            <th>Позив на број</th>
-            <th>Статус</th>
-            <th>Действия</th>
+            <th>Стор</th>
+            <th>Платёж</th>
+            <th>Состояние</th>
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let o of orders" [class.pending]="o.status === 'PENDING'">
-            <td>{{ o.createdAt | date: 'dd.MM.yyyy HH:mm' }}</td>
-            <td>{{ o.userEmail || o.userId }}</td>
-            <td>{{ o.sku }} — {{ kindLabel(o.tariffKind) }}, {{ o.months }} мес.</td>
-            <td class="amount">{{ o.amountRsd }} RSD</td>
-            <td class="reference">{{ o.referenceDisplay }}</td>
+          <tr *ngFor="let p of purchases" [class.revoked]="p.status === 'REFUNDED'">
+            <td>{{ p.purchasedAt | date: 'dd.MM.yyyy HH:mm' }}</td>
+            <td>{{ p.userEmail || p.userId }}</td>
+            <td>{{ p.sku }} — {{ kindLabel(p.tariffKind) }}, {{ p.months }} мес.</td>
+            <td>{{ platformLabel(p.platform) }}</td>
+            <td class="reference">{{ p.transactionId }}</td>
             <td>
-              {{ statusLabel(o.status) }}
-              <div class="hint" *ngIf="o.status === 'PENDING'">
-                до {{ o.paymentDueAt | date: 'dd.MM.yyyy' }}
+              {{ statusLabel(p.status) }}
+              <!-- У автоподписки дата — следующее списание, а не конец доступа. -->
+              <div class="hint" *ngIf="p.autoRenewing">
+                продлевается автоматически{{
+                  p.expiresAt ? ', до ' + (p.expiresAt | date: 'dd.MM.yyyy') : ''
+                }}
               </div>
-            </td>
-            <td class="actions">
-              <ng-container *ngIf="o.status === 'PENDING'">
-                <button mat-flat-button color="primary" (click)="confirm(o)">Оплачен</button>
-                <button mat-stroked-button (click)="cancel(o)">Отменить</button>
-              </ng-container>
             </td>
           </tr>
         </tbody>
       </table>
 
-      <p class="empty" *ngIf="!loadingOrders && !orders.length">Заказов не найдено.</p>
+      <p class="empty" *ngIf="!loadingPurchases && !purchases.length">Покупок не найдено.</p>
 
-      <div class="pager" *ngIf="ordersTotal > pageSize">
+      <div class="pager" *ngIf="purchasesTotal > pageSize">
         <button mat-stroked-button (click)="prevPage()" [disabled]="offset === 0">Назад</button>
-        <span>{{ offset + 1 }}–{{ offset + orders.length }} из {{ ordersTotal }}</span>
+        <span>{{ offset + 1 }}–{{ offset + purchases.length }} из {{ purchasesTotal }}</span>
         <button
           mat-stroked-button
           (click)="nextPage()"
-          [disabled]="offset + pageSize >= ordersTotal"
+          [disabled]="offset + pageSize >= purchasesTotal"
         >
           Вперёд
         </button>
@@ -107,8 +103,15 @@
           <mat-card-content>
             <p *ngIf="u.subscription.active; else noSub">
               Подписка активна: <b>{{ kindLabel(u.subscription.tariffKind) }}</b
-              >, до {{ u.subscription.endsAt | date: 'dd.MM.yyyy' }} (осталось
-              {{ u.subscription.daysLeft }} дн.)
+              >,
+              <ng-container *ngIf="u.subscription.autoRenewing; else untilDate">
+                следующее списание {{ u.subscription.endsAt | date: 'dd.MM.yyyy' }} (продлевается
+                автоматически)
+              </ng-container>
+              <ng-template #untilDate
+                >до {{ u.subscription.endsAt | date: 'dd.MM.yyyy' }} (осталось
+                {{ u.subscription.daysLeft }} дн.)</ng-template
+              >
             </p>
             <ng-template #noSub><p>Активной подписки нет.</p></ng-template>
             <p class="hint">Фича-флаги: {{ u.subscription.featureKeys.join(', ') || '—' }}</p>
@@ -140,7 +143,8 @@
             </div>
             <p class="hint">
               «Выдать» ставит выбранный набор флагов (апгрейд базовый → с русским делается им же),
-              «Продлить» добавляет месяцы к текущему набору.
+              «Продлить» добавляет месяцы к текущему набору. Деньги возвращаются в консоли стора —
+              здесь только доступ, и отзыв не отменяет автопродление.
             </p>
           </mat-card-content>
         </mat-card>
@@ -163,7 +167,9 @@
                   <td>{{ p.startsAt | date: 'dd.MM.yyyy' }}</td>
                   <td>{{ p.endsAt | date: 'dd.MM.yyyy' }}</td>
                   <td>{{ kindLabel(p.tariffKind) }}</td>
-                  <td>{{ p.source === 'ORDER' ? 'заказ' : 'вручную' }}</td>
+                  <td>
+                    {{ p.source === 'MANUAL' ? 'вручную' : p.source === 'STORE' ? 'покупка' : 'заказ' }}
+                  </td>
                   <td>{{ p.revokedAt ? 'отозван; ' : '' }}{{ p.note }}</td>
                 </tr>
               </tbody>
@@ -173,40 +179,29 @@
         </mat-card>
 
         <mat-card class="card">
-          <mat-card-title>История заказов</mat-card-title>
+          <mat-card-title>Покупки</mat-card-title>
           <mat-card-content>
-            <table class="grid" *ngIf="u.orders.length; else noOrders">
+            <table class="grid" *ngIf="u.purchases.length; else noPurchases">
               <thead>
                 <tr>
-                  <th>Создан</th>
+                  <th>Куплено</th>
                   <th>Тариф</th>
-                  <th>Сумма</th>
-                  <th>Позив на број</th>
-                  <th>Статус</th>
-                  <th></th>
+                  <th>Стор</th>
+                  <th>Платёж</th>
+                  <th>Состояние</th>
                 </tr>
               </thead>
               <tbody>
-                <tr *ngFor="let o of u.orders">
-                  <td>{{ o.createdAt | date: 'dd.MM.yyyy HH:mm' }}</td>
-                  <td>{{ o.sku }}</td>
-                  <td class="amount">{{ o.amountRsd }} RSD</td>
-                  <td class="reference">{{ o.referenceDisplay }}</td>
-                  <td>{{ statusLabel(o.status) }}</td>
-                  <td class="actions">
-                    <button
-                      mat-flat-button
-                      color="primary"
-                      *ngIf="o.status === 'PENDING'"
-                      (click)="confirm(o)"
-                    >
-                      Оплачен
-                    </button>
-                  </td>
+                <tr *ngFor="let p of u.purchases" [class.revoked]="p.status === 'REFUNDED'">
+                  <td>{{ p.purchasedAt | date: 'dd.MM.yyyy HH:mm' }}</td>
+                  <td>{{ p.sku }}</td>
+                  <td>{{ platformLabel(p.platform) }}</td>
+                  <td class="reference">{{ p.transactionId }}</td>
+                  <td>{{ statusLabel(p.status) }}</td>
                 </tr>
               </tbody>
             </table>
-            <ng-template #noOrders><p class="empty">Заказов нет.</p></ng-template>
+            <ng-template #noPurchases><p class="empty">Покупок нет.</p></ng-template>
           </mat-card-content>
         </mat-card>
       </ng-container>
@@ -242,7 +237,10 @@
   <!-- ------------------------------------------------------------ Тарифы -->
   <mat-tab label="Тарифы">
     <div class="tab-body">
-      <p class="hint">Цены хранятся в базе — их можно менять без релиза приложения.</p>
+      <p class="hint">
+        Справочная цена для веб-витрины и привязка к товарам сторов. Сколько человек заплатит на
+        самом деле, задано в App Store Connect и Google Play Console.
+      </p>
       <table class="grid" *ngIf="tariffs.length">
         <thead>
           <tr>
@@ -250,6 +248,7 @@
             <th>Тариф</th>
             <th>Срок</th>
             <th>Цена, RSD</th>
+            <th>Товары в сторах</th>
             <th>В витрине</th>
           </tr>
         </thead>
@@ -265,6 +264,10 @@
                 [value]="t.priceRsd"
                 (blur)="savePrice(t, $any($event.target).value)"
               />
+            </td>
+            <td class="details">
+              {{ t.appleProductId || '—' }} / {{ t.googleProductId || '—' }}
+              <div class="hint" *ngIf="t.autoRenewing">автопродление</div>
             </td>
             <td>
               <mat-checkbox [checked]="t.active" (change)="toggleActive(t)"></mat-checkbox>
