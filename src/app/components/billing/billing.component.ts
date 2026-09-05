@@ -22,7 +22,6 @@ import {
   StorePurchase,
   StorePurchaseStatus,
   Tariff,
-  TariffKind,
 } from '../../services/billing.service';
 import { AuthService } from '../../services/auth.service';
 
@@ -72,7 +71,6 @@ export class BillingComponent implements OnInit {
   user: BillingUser | null = null;
   userNotFound = false;
   loadingUser = false;
-  grantKind: TariffKind = 'BASIC';
   grantMonths = 12;
   grantNote = '';
 
@@ -152,13 +150,6 @@ export class BillingComponent implements OnInit {
     return this.platforms.find((p) => p.value === platform)?.label || platform;
   }
 
-  kindLabel(kind: TariffKind | null | undefined): string {
-    if (!kind) {
-      return '—';
-    }
-    return kind === 'RUSSIAN' ? 'с русским контентом' : 'базовый';
-  }
-
   // --------------------------------------------------------- пользователь
 
   findUser(): void {
@@ -186,7 +177,7 @@ export class BillingComponent implements OnInit {
       return;
     }
     this.billing
-      .grantSubscription(this.user.userId, this.grantKind, this.grantMonths, this.grantNote)
+      .grantSubscription(this.user.userId, this.grantMonths, this.grantNote)
       .subscribe({
         next: () => {
           this.ok('Подписка выдана');
