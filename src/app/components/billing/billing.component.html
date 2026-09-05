@@ -51,7 +51,7 @@
           <tr *ngFor="let p of purchases" [class.revoked]="p.status === 'REFUNDED'">
             <td>{{ p.purchasedAt | date: 'dd.MM.yyyy HH:mm' }}</td>
             <td>{{ p.userEmail || p.userId }}</td>
-            <td>{{ p.sku }} — {{ kindLabel(p.tariffKind) }}, {{ p.months }} мес.</td>
+            <td>{{ p.sku }}, {{ p.months }} мес.</td>
             <td>{{ platformLabel(p.platform) }}</td>
             <td class="reference">{{ p.transactionId }}</td>
             <td>
@@ -102,8 +102,7 @@
           <mat-card-title>{{ u.email }}</mat-card-title>
           <mat-card-content>
             <p *ngIf="u.subscription.active; else noSub">
-              Подписка активна: <b>{{ kindLabel(u.subscription.tariffKind) }}</b
-              >,
+              Подписка <b>Premium</b> активна,
               <ng-container *ngIf="u.subscription.autoRenewing; else untilDate">
                 следующее списание {{ u.subscription.endsAt | date: 'dd.MM.yyyy' }} (продлевается
                 автоматически)
@@ -121,13 +120,6 @@
         <mat-card class="card">
           <mat-card-title>Выдать / изменить подписку вручную</mat-card-title>
           <mat-card-content class="grant-form">
-            <mat-form-field appearance="outline">
-              <mat-label>Тариф</mat-label>
-              <mat-select [(ngModel)]="grantKind">
-                <mat-option value="BASIC">базовый</mat-option>
-                <mat-option value="RUSSIAN">с русским контентом</mat-option>
-              </mat-select>
-            </mat-form-field>
             <mat-form-field appearance="outline">
               <mat-label>Месяцев</mat-label>
               <input matInput type="number" min="1" max="120" [(ngModel)]="grantMonths" />
@@ -166,7 +158,6 @@
                 <tr *ngFor="let p of u.periods" [class.revoked]="p.revokedAt">
                   <td>{{ p.startsAt | date: 'dd.MM.yyyy' }}</td>
                   <td>{{ p.endsAt | date: 'dd.MM.yyyy' }}</td>
-                  <td>{{ kindLabel(p.tariffKind) }}</td>
                   <td>
                     {{ p.source === 'MANUAL' ? 'вручную' : p.source === 'STORE' ? 'покупка' : 'заказ' }}
                   </td>
@@ -255,7 +246,6 @@
         <tbody>
           <tr *ngFor="let t of tariffs">
             <td>{{ t.sku }}</td>
-            <td>{{ kindLabel(t.kind) }}</td>
             <td>{{ t.months }} мес.</td>
             <td>
               <input

@@ -7,16 +7,12 @@ import { map } from 'rxjs/operators';
 export type StorePlatform = 'APPLE' | 'GOOGLE';
 // Состояние покупки по данным магазина (`StorePurchaseStatus`).
 export type StorePurchaseStatus = 'ACTIVE' | 'EXPIRED' | 'REFUNDED';
-// Семейство тарифа: базовый или с русским контентом.
-export type TariffKind = 'BASIC' | 'RUSSIAN';
-
 export interface StorePurchase {
   id: string;
   userId: string;
   userEmail?: string | null;
   platform: StorePlatform;
   sku: string;
-  tariffKind: TariffKind;
   months: number;
   productId: string;
   transactionId: string;
@@ -34,7 +30,6 @@ export interface StorePurchasesPage {
 
 export interface SubscriptionStatus {
   active: boolean;
-  tariffKind?: TariffKind | null;
   featureKeys: string[];
   endsAt?: string | null;
   daysLeft?: number | null;
@@ -47,7 +42,6 @@ export interface SubscriptionStatus {
 export interface SubscriptionPeriod {
   id: string;
   featureKeys: string[];
-  tariffKind?: TariffKind | null;
   startsAt: string;
   endsAt: string;
   source: 'STORE' | 'MANUAL' | 'ORDER';
@@ -78,7 +72,6 @@ export interface AuditEntry {
 
 export interface Tariff {
   sku: string;
-  kind: TariffKind;
   months: number;
   priceRsd: number;
   featureKeys: string[];
@@ -95,7 +88,6 @@ const PURCHASE_FIELDS = `
   userEmail
   platform
   sku
-  tariffKind
   months
   productId
   transactionId
@@ -108,7 +100,6 @@ const PURCHASE_FIELDS = `
 
 const SUBSCRIPTION_FIELDS = `
   active
-  tariffKind
   featureKeys
   endsAt
   daysLeft
@@ -121,7 +112,6 @@ const SUBSCRIPTION_FIELDS = `
 const PERIOD_FIELDS = `
   id
   featureKeys
-  tariffKind
   startsAt
   endsAt
   source
@@ -133,7 +123,7 @@ const PERIOD_FIELDS = `
 `;
 
 const TARIFF_FIELDS = `
-  sku kind months priceRsd featureKeys appleProductId googleProductId
+  sku months priceRsd featureKeys appleProductId googleProductId
   autoRenewing active sortOrder
 `;
 
@@ -227,15 +217,15 @@ export class BillingService {
       .pipe(map((r) => r.data.allTariffs));
   }
 
+  // Один тариф — Premium; выдаётся только срок.
   grantSubscription(
     userId: string,
-    kind: TariffKind,
     months: number,
     note: string | null
   ): Observable<SubscriptionPeriod> {
     const MUTATION = gql`
-      mutation GrantSubscription($userId: ID!, $kind: TariffKind!, $months: Int!, $note: String) {
-        grantSubscription(userId: $userId, kind: $kind, months: $months, note: $note) {
+      mutation GrantSubscription($userId: ID!, $months: Int!, $note: String) {
+        grantSubscription(userId: $userId, months: $months, note: $note) {
           ${PERIOD_FIELDS}
         }
       }
@@ -243,7 +233,7 @@ export class BillingService {
     return this.apollo
       .mutate<{ grantSubscription: SubscriptionPeriod }>({
         mutation: MUTATION,
-        variables: { userId, kind, months, note: note || null },
+        variables: { userId, months, note: note || null },
       })
       .pipe(map((r) => r.data!.grantSubscription));
   }
