@@ -18,20 +18,21 @@ import {
   AuditEntry,
   BillingService,
   BillingUser,
-  Order,
-  OrderStatus,
+  StorePlatform,
+  StorePurchase,
+  StorePurchaseStatus,
   Tariff,
-  TariffKind,
 } from '../../services/billing.service';
 import { AuthService } from '../../services/auth.service';
 
 /**
- * Денежный стол оператора: входящие заказы, ручное подтверждение оплаты,
- * карточка пользователя с подпиской и журнал операций.
+ * Денежный стол оператора: покупки в сторах, карточка пользователя с
+ * подпиской, журнал операций и каталог тарифов.
  *
- * На этой итерации подтверждение оплаты — единственный способ выдать подписку,
- * поэтому поиск идёт по позиву на број (его оператор видит в банковской
- * выписке) и по email.
+ * Деньги берут App Store и Google Play, поэтому подтверждать оплату здесь
+ * нечего — право появляется само по проверенному чеку. Поиск идёт по email
+ * покупателя и по идентификатору платежа: именно его называет человек,
+ * пришедший с вопросом о возврате.
  */
 @Component({
   selector: 'app-billing',
@@ -57,20 +58,19 @@ import { AuthService } from '../../services/auth.service';
 export class BillingComponent implements OnInit {
   readonly pageSize = 50;
 
-  // --- Заказы
-  orders: Order[] = [];
-  ordersTotal = 0;
+  // --- Покупки
+  purchases: StorePurchase[] = [];
+  purchasesTotal = 0;
   offset = 0;
-  statusFilter: OrderStatus | '' = 'PENDING';
+  platformFilter: StorePlatform | '' = '';
   search = '';
-  loadingOrders = false;
+  loadingPurchases = false;
 
   // --- Карточка пользователя
   userEmail = '';
   user: BillingUser | null = null;
   userNotFound = false;
   loadingUser = false;
-  grantKind: TariffKind = 'BASIC';
   grantMonths = 12;
   grantNote = '';
 
@@ -78,12 +78,10 @@ export class BillingComponent implements OnInit {
   audit: AuditEntry[] = [];
   tariffs: Tariff[] = [];
 
-  readonly statuses: { value: OrderStatus | ''; label: string }[] = [
-    { value: '', label: 'Все' },
-    { value: 'PENDING', label: 'Ожидает оплату' },
-    { value: 'PAID', label: 'Оплачен' },
-    { value: 'CANCELLED', label: 'Отменён' },
-    { value: 'EXPIRED', label: 'Протух' },
+  readonly platforms: { value: StorePlatform | ''; label: string }[] = [
+    { value: '', label: 'Все сторы' },
+    { value: 'APPLE', label: 'App Store' },
+    { value: 'GOOGLE', label: 'Google Play' },
   ];
 
   constructor(
@@ -94,39 +92,39 @@ export class BillingComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
-    this.loadOrders();
+    this.loadPurchases();
   }
 
-  // ------------------------------------------------------------------ заказы
+  // ----------------------------------------------------------------- покупки
 
-  loadOrders(): void {
-    this.loadingOrders = true;
+  loadPurchases(): void {
+    this.loadingPurchases = true;
     this.billing
-      .orders(this.statusFilter || null, this.search.trim() || null, this.pageSize, this.offset)
+      .purchases(this.platformFilter || null, this.search.trim() || null, this.pageSize, this.offset)
       .subscribe({
         next: (page) => {
-          this.orders = page.items;
-          this.ordersTotal = page.total;
-          this.loadingOrders = false;
+          this.purchases = page.items;
+          this.purchasesTotal = page.total;
+          this.loadingPurchases = false;
         },
         error: (e) => {
-          this.loadingOrders = false;
-          this.fail('Не удалось загрузить заказы', e);
+          this.loadingPurchases = false;
+          this.fail('Не удалось загрузить покупки', e);
         },
       });
   }
 
   applyFilters(): void {
     this.offset = 0;
-    this.loadOrders();
+    this.loadPurchases();
   }
 
   nextPage(): void {
-    if (this.offset + this.pageSize >= this.ordersTotal) {
+    if (this.offset + this.pageSize >= this.purchasesTotal) {
       return;
     }
     this.offset += this.pageSize;
-    this.loadOrders();
+    this.loadPurchases();
   }
 
   prevPage(): void {
@@ -134,51 +132,22 @@ export class BillingComponent implements OnInit {
       return;
     }
     this.offset = Math.max(0, this.offset - this.pageSize);
-    this.loadOrders();
+    this.loadPurchases();
   }
 
-  confirm(order: Order): void {
-    // Операция с деньгами — подтверждаем намерение, случайный клик дорого стоит.
-    const ok = confirm(
-      `Подтвердить оплату заказа ${order.referenceDisplay} на ${order.amountRsd} RSD` +
-        ` (${order.userEmail || order.userId})?\nПользователю будет выдана подписка и уйдёт письмо.`
-    );
-    if (!ok) {
-      return;
+  statusLabel(status: StorePurchaseStatus): string {
+    switch (status) {
+      case 'ACTIVE':
+        return 'активна';
+      case 'EXPIRED':
+        return 'закончилась';
+      case 'REFUNDED':
+        return 'возврат';
     }
-    this.billing.confirmOrder(order.id).subscribe({
-      next: () => {
-        this.ok('Оплата подтверждена, подписка выдана');
-        this.loadOrders();
-        this.refreshUserIfShown(order.userEmail);
-      },
-      error: (e) => this.fail('Не удалось подтвердить оплату', e),
-    });
   }
 
-  cancel(order: Order): void {
-    const reason = prompt('Причина отмены заказа (необязательно):', '');
-    if (reason === null) {
-      return;
-    }
-    this.billing.cancelOrder(order.id, reason).subscribe({
-      next: () => {
-        this.ok('Заказ отменён');
-        this.loadOrders();
-      },
-      error: (e) => this.fail('Не удалось отменить заказ', e),
-    });
-  }
-
-  statusLabel(status: OrderStatus): string {
-    return this.statuses.find((s) => s.value === status)?.label || status;
-  }
-
-  kindLabel(kind: TariffKind | null | undefined): string {
-    if (!kind) {
-      return '—';
-    }
-    return kind === 'RUSSIAN' ? 'с русским контентом' : 'базовый';
+  platformLabel(platform: StorePlatform): string {
+    return this.platforms.find((p) => p.value === platform)?.label || platform;
   }
 
   // --------------------------------------------------------- пользователь
@@ -208,7 +177,7 @@ export class BillingComponent implements OnInit {
       return;
     }
     this.billing
-      .grantSubscription(this.user.userId, this.grantKind, this.grantMonths, this.grantNote)
+      .grantSubscription(this.user.userId, this.grantMonths, this.grantNote)
       .subscribe({
         next: () => {
           this.ok('Подписка выдана');
@@ -237,7 +206,12 @@ export class BillingComponent implements OnInit {
     if (!this.user) {
       return;
     }
-    if (!confirm(`Отозвать подписку у ${this.user.email}?`)) {
+    if (
+      !confirm(
+        `Отозвать подписку у ${this.user.email}?\n` +
+          'Автопродление в сторе это не отменит — его отменяет только сам покупатель.'
+      )
+    ) {
       return;
     }
     this.billing.revokeSubscription(this.user.userId, this.grantNote).subscribe({
@@ -248,12 +222,6 @@ export class BillingComponent implements OnInit {
       },
       error: (e) => this.fail('Не удалось отозвать подписку', e),
     });
-  }
-
-  private refreshUserIfShown(email: string | null | undefined): void {
-    if (this.user && email && this.user.email === email) {
-      this.findUser();
-    }
   }
 
   // ------------------------------------------------------- журнал и тарифы
